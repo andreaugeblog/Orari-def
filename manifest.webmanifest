@@ -1,0 +1,29 @@
+{
+  "name": "Turni Supermercato",
+  "short_name": "Turni",
+  "description": "Generatore automatico di turni di lavoro",
+  "theme_color": "#0f172a",
+  "background_color": "#f1f5f9",
+  "display": "standalone",
+  "orientation": "any",
+  "start_url": ".",
+  "scope": ".",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

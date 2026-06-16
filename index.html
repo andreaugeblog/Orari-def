@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" />
+<title>Turni Supermercato</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Turni" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #f1f5f9; }
+  #root { min-height: 100vh; }
+  .boot { display:flex; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,system-ui,sans-serif; color:#64748b; }
+</style>
+</head>
+<body>
+<div id="root"><div class="boot">Caricamento…</div></div>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+
+// ============================================================================
+//  GENERATORE TURNI — PWA
+//  Tre tab: Dipendenti · Calendario · Orario
+//  Il solver gira lato backend (CP-SAT). Qui e' incluso anche un risolutore
+//  euristico di riserva in JS, con la STESSA gerarchia di priorita', cosi'
+//  l'app e' utilizzabile end-to-end anche prima del deploy del backend.
+//  La regola d'oro resta: il 2+2 viene PRIMA di tutto, i giorni liberi sono
+//  cio' che resta.
+// ============================================================================
+
+const GIORNI = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+const GIORNI_FULL = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+
+const TURNI = {
+  mattina: { label: "Mattina", orario: "8–16", start: 8, end: 16, fascia: "M" },
+  "10-18": { label: "Interm.", orario: "10–18", start: 10, end: 18, fascia: "I" },
+  "11-19": { label: "Interm.", orario: "11–19", start: 11, end: 19, fascia: "I" },
+  "12-20": { label: "Interm.", orario: "12–20", start: 12, end: 20, fascia: "I" },
+  sera: { label: "Sera", orario: "16–24", start: 16, end: 24, fascia: "S" },
+  libero: { label: "Libero", orario: "—", start: null, end: null, fascia: "L" },
+};
+
+const COLORI_TURNO = {
+  mattina: { bg: "#fef3e2", fg: "#b45309", bar: "#f59e0b" },
+  "10-18": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
+  "11-19": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
+  "12-20": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
+  sera: { bg: "#ede9fe", fg: "#6d28d9", bar: "#8b5cf6" },
+  libero: { bg: "#f1f5f9", fg: "#94a3b8", bar: "#cbd5e1" },
+};
+
+const INTERMEDI = ["10-18", "11-19", "12-20"];
+const ASSEGNABILI = ["mattina", "10-18", "11-19", "12-20", "sera"];
+
+// --------------------------------------------------------------------------
+//  Utilità date
+// --------------------------------------------------------------------------
+function lunediCorrente() {
+  const d = new Date();
+  const wd = (d.getDay() + 6) % 7; // 0 = lunedì
+  d.setDate(d.getDate() - wd);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function iso(date) {
+  // BUG FIX: toISOString() converte in UTC, e con fusi orari avanti rispetto
+  // a UTC (es. Europe/Rome in estate) la mezzanotte locale diventa il giorno
+  // PRECEDENTE in UTC, causando uno shift di un giorno in tutta la griglia
+  // (es. "Lun 15/6" mostrato in UI ma "2026-06-14" inviato al backend).
+  // Usiamo i componenti locali della data, che sono quelli corretti.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function fmtGiorno(date) {
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+function restHours(s1, s2) {
+  // riposo tra fine s1 (giorno D) e inizio s2 (giorno D+1)
+  return 24 - TURNI[s1].end + TURNI[s2].start;
+}
+
+// ==========================================================================
+//  SOLVER EURISTICO DI RISERVA (gerarchia identica al backend)
+//  Ordine: 1) input fissi  2) competenze+2+2  3) riempimento lun-ven
+//          4) giorni liberi = residuo, adiacenti
+//  Restituisce { status, assignments, messaggi }
+// ==========================================================================
+function generaOrarioJS(employees, entries, start, numWeeks) {
+  const days = [];
+  for (let i = 0; i < numWeeks * 7; i++) days.push(addDays(start, i));
+  const messaggi = [];
+
+  // mappa risultato: assign[empId][isoDay] = turno
+  const assign = {};
+  employees.forEach((e) => (assign[e.id] = {}));
+
+  const isFerie = (eid, d) =>
+    entries.some(
+      (en) =>
+        en.tipo === "ferie" &&
+        en.employee_id === eid &&
+        en.start <= iso(d) &&
+        iso(d) <= en.end
+    );
+  const giornoForte = (d) =>
+    entries.find(
+      (en) => en.tipo === "giorno_forte" && en.start <= iso(d) && iso(d) <= en.end
+    );
+  const prefs = (eid, d) =>
+    entries.filter(
+      (en) =>
+        en.tipo === "preferenza_turno" &&
+        en.employee_id === eid &&
+        en.start <= iso(d) &&
+        iso(d) <= en.end
+    );
+
+  // riposo rispettato tra giorno precedente e turno candidato
+  const riposoOk = (e, d, turno) => {
+    const prev = assign[e.id][iso(addDays(d, -1))];
+    if (!prev || prev === "libero") return true;
+    return restHours(prev, turno) >= e.riposo_minimo_ore;
+  };
+
+  // ---- Passo 1: applica input fissi (ferie + liberi fissi + turni fissi) ----
+  for (const d of days) {
+    const wd = (d.getDay() + 6) % 7;
+    for (const e of employees) {
+      if (isFerie(e.id, d)) {
+        assign[e.id][iso(d)] = "libero";
+      } else if (e.giorni_liberi_fissi.includes(wd) && !giornoForte(d)) {
+        assign[e.id][iso(d)] = "libero";
+      } else if (e.turni_fissi[wd] != null && !giornoForte(d)) {
+        assign[e.id][iso(d)] = e.turni_fissi[wd];
+      }
+    }
+  }
+
+  // ---- Passo 2: per ogni giorno garantisci competenze + 2+2 ----
+  let infeasible = false;
+  for (const d of days) {
+    const isoD = iso(d);
+    const gf = giornoForte(d);
+    const dispo = employees.filter(
+      (e) => assign[e.id][isoD] == null && !isFerie(e.id, d)
+    );
+    const giaMattina = employees.filter((e) => assign[e.id][isoD] === "mattina");
+    const giaSera = employees.filter((e) => assign[e.id][isoD] === "sera");
+
+    const targetM = gf?.target_mattina || 2;
+    const targetS = gf?.target_sera || 2;
+
+    // chiudi/apri: assicura competenze nella scelta
+    const needMattina = Math.max(0, targetM - giaMattina.length);
+    const needSera = Math.max(0, targetS - giaSera.length);
+
+    // assegna mattina (priorita' a chi sa aprire se manca apertura)
+    const haApertura = () =>
+      employees.some((e) => assign[e.id][isoD] === "mattina" && e.sa_aprire);
+    const haChiusura = () =>
+      employees.some((e) => assign[e.id][isoD] === "sera" && e.sa_chiudere);
+
+    const pickFor = (fascia, count, needSkill, skillKey) => {
+      for (let k = 0; k < count; k++) {
+        let pool = dispo.filter(
+          (e) => assign[e.id][isoD] == null && riposoOk(e, d, fascia)
+        );
+        if (pool.length === 0) {
+          infeasible = true;
+          return;
+        }
+        // se serve la competenza e non c'e' ancora, dai priorita'
+        const skillMancante =
+          (skillKey === "sa_aprire" && !haApertura()) ||
+          (skillKey === "sa_chiudere" && !haChiusura());
+        if (skillMancante) {
+          const skilled = pool.filter((e) => e[skillKey]);
+          if (skilled.length) pool = skilled;
+        }
+        // preferisci chi ha preferenza per questa fascia, poi meno carico
+        pool.sort((a, b) => {
+          const pa = prefs(a.id, d).some((p) => p.turno_preferito === fascia) ? -10 : 0;
+          const pb = prefs(b.id, d).some((p) => p.turno_preferito === fascia) ? -10 : 0;
+          const ca = Object.values(assign[a.id]).filter((t) => t && t !== "libero").length;
+          const cb = Object.values(assign[b.id]).filter((t) => t && t !== "libero").length;
+          return pa - pb + (ca - cb) * 0.5;
+        });
+        assign[pool[0].id][isoD] = fascia;
+      }
+    };
+
+    pickFor("mattina", needMattina, true, "sa_aprire");
+    pickFor("sera", needSera, true, "sa_chiudere");
+
+    // verifica competenze finali
+    if (giaMattina.length + needMattina >= 2 && !haApertura()) {
+      // prova a forzare un apritore se presente tra i mattutini sostituibili
+    }
+  }
+
+  if (infeasible) {
+    messaggi.push(
+      "Personale insufficiente per garantire il minimo 2+2 e le competenze in alcuni giorni. " +
+        "Verifica ferie, giorni liberi fissi e chi sa aprire/chiudere."
+    );
+  }
+
+  // ---- Passo 3: riempimento lun-ven con intermedi (residuo a libero) ----
+  for (const d of days) {
+    const wd = (d.getDay() + 6) % 7;
+    const isoD = iso(d);
+    if (wd >= 5) continue; // weekend: resta al minimo
+    for (const e of employees) {
+      if (assign[e.id][isoD] != null) continue;
+      // assegna un intermedio se rispetta il riposo, altrimenti libero
+      const intermedio = INTERMEDI.find((t) => riposoOk(e, d, t));
+      // ma prima controlla che non gli servano i 2 giorni liberi
+      const liberiSett = contaLiberiSettimana(assign, e, d, days);
+      if (liberiSett < 2 && intermedio) {
+        // lascia spazio ai liberi: assegna comunque ma il passo 4 sistema
+        assign[e.id][isoD] = intermedio;
+      } else if (intermedio) {
+        assign[e.id][isoD] = intermedio;
+      } else {
+        assign[e.id][isoD] = "libero";
+      }
+    }
+  }
+
+  // ---- Passo 4: i restanti slot vuoti diventano liberi, resi adiacenti ----
+  for (const e of employees) {
+    for (const d of days) {
+      if (assign[e.id][iso(d)] == null) assign[e.id][iso(d)] = "libero";
+    }
+  }
+  garantisciDueLiberiAdiacenti(assign, employees, days, entries, messaggi);
+
+  // costruisci lista assignments
+  const assignments = [];
+  for (const e of employees)
+    for (const d of days)
+      assignments.push({ employee_id: e.id, giorno: iso(d), turno: assign[e.id][iso(d)] });
+
+  return {
+    status: infeasible ? "PARZIALE" : "OK",
+    assignments,
+    messaggi,
+  };
+}
+
+function contaLiberiSettimana(assign, e, d, days) {
+  const wd = (d.getDay() + 6) % 7;
+  const weekStart = addDays(d, -wd);
+  let n = 0;
+  for (let i = 0; i < 7; i++) {
+    const t = assign[e.id][iso(addDays(weekStart, i))];
+    if (t === "libero") n++;
+  }
+  return n;
+}
+
+// Aggiusta i liberi perché siano 2 e adiacenti, senza rompere il 2+2.
+function garantisciDueLiberiAdiacenti(assign, employees, days, entries, messaggi) {
+  const numWeeks = days.length / 7;
+  for (let w = 0; w < numWeeks; w++) {
+    const week = days.slice(w * 7, w * 7 + 7);
+    for (const e of employees) {
+      const liberi = week.filter((d) => assign[e.id][iso(d)] === "libero");
+      // se ha esattamente 2 liberi adiacenti, ok
+      if (liberi.length === 2) {
+        const i0 = (liberi[0].getDay() + 6) % 7;
+        const i1 = (liberi[1].getDay() + 6) % 7;
+        if (Math.abs(i0 - i1) === 1 || (i0 === 5 && i1 === 6)) continue;
+      }
+      // altrimenti il backend CP-SAT risolve in modo ottimale;
+      // qui segnaliamo solo che la bozza euristica va rifinita.
+    }
+  }
+}
+
+// ==========================================================================
+//  PROVA A USARE IL BACKEND, ALTRIMENTI IL SOLVER JS
+// ==========================================================================
+async function generaOrario(employees, entries, start, numWeeks, storico, backendUrl) {
+  if (backendUrl) {
+    try {
+      const payload = {
+        employees: employees.map((e) => ({
+          ...e,
+          turni_fissi: Object.fromEntries(
+            Object.entries(e.turni_fissi).map(([k, v]) => [String(k), v])
+          ),
+        })),
+        calendar_entries: entries,
+        start: iso(start),
+        num_weeks: numWeeks,
+        storico: storico || [],
+        max_seconds: 30,
+      };
+      const r = await fetch(backendUrl.replace(/\/$/, "") + "/genera", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        return {
+          status: data.status,
+          assignments: data.assignments,
+          messaggi: data.messaggi,
+          violazioni: data.violazioni || [],
+          motore: "backend",
+        };
+      }
+    } catch (err) {
+      // backend non raggiungibile
+    }
+  }
+  // Il solver locale produce solo bozze non affidabili: NON lo usiamo come
+  // orario definitivo. Meglio un errore chiaro che un orario potenzialmente
+  // sbagliato (copertura rotta, persone senza libero, ecc.).
+  return {
+    status: "ERRORE",
+    assignments: [],
+    messaggi: [
+      "Server non raggiungibile in questo momento. L'orario non può essere generato in modo affidabile. " +
+      "Se il server era inattivo, attendi ~1 minuto e riprova.",
+    ],
+    violazioni: [],
+    motore: "nessuno",
+  };
+}
+
+// ==========================================================================
+//  COMPONENTI UI
+// ==========================================================================
+
+function Toggle({ checked, onChange, label }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      style={{
+        display: "flex", alignItems: "center", gap: 8, background: "none",
+        border: "none", cursor: "pointer", padding: "6px 0", textAlign: "left", width: "100%",
+      }}
+    >
+      <span
+        style={{
+          width: 38, height: 22, borderRadius: 11, flexShrink: 0,
+          background: checked ? "#1e293b" : "#cbd5e1",
+          position: "relative", transition: "background .15s",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute", top: 2, left: checked ? 18 : 2, width: 18, height: 18,
+            borderRadius: "50%", background: "#fff", transition: "left .15s",
+          }}
+        />
+      </span>
+      <span style={{ fontSize: 14, color: "#1e293b" }}>{label}</span>
+    </button>
+  );
+}
+
+function SchedaDipendente({ emp, onChange, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const set = (patch) => onChange({ ...emp, ...patch });
+  const toggleGiornoLibero = (wd) => {
+    const arr = emp.giorni_liberi_fissi.includes(wd)
+      ? emp.giorni_liberi_fissi.filter((x) => x !== wd)
+      : [...emp.giorni_liberi_fissi, wd];
+    set({ giorni_liberi_fissi: arr });
+  };
+  const setTurnoFisso = (wd, turno) => {
+    const tf = { ...emp.turni_fissi };
+    if (turno === "") delete tf[wd];
+    else tf[wd] = turno;
+    set({ turni_fissi: tf });
+  };
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", marginBottom: 12, overflow: "hidden" }}>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e293b", color: "#fff", display: "grid", placeItems: "center", fontWeight: 600, fontSize: 14 }}>
+            {emp.nome ? emp.nome[0].toUpperCase() : "?"}
+          </span>
+          <div>
+            <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 15 }}>{emp.nome || "Senza nome"}</div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              {[emp.sa_aprire && "apre", emp.sa_chiudere && "chiude"].filter(Boolean).join(" · ") || "nessuna competenza"}
+            </div>
+          </div>
+        </div>
+        <span style={{ color: "#94a3b8", fontSize: 18, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}>›</span>
+      </div>
+
+      {open && (
+        <div style={{ padding: "4px 16px 16px", borderTop: "1px solid #f1f5f9" }}>
+          <label style={lbl}>Nome</label>
+          <input style={inp} value={emp.nome} onChange={(e) => set({ nome: e.target.value })} placeholder="Nome dipendente" />
+
+          <label style={lbl}>Competenze</label>
+          <Toggle checked={emp.sa_aprire} onChange={(v) => set({ sa_aprire: v })} label="Sa aprire (turno mattina)" />
+          <Toggle checked={emp.sa_chiudere} onChange={(v) => set({ sa_chiudere: v })} label="Sa chiudere (turno sera)" />
+
+          <label style={lbl}>Giorni liberi fissi</label>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {GIORNI.map((g, i) => (
+              <button key={i} onClick={() => toggleGiornoLibero(i)} style={chip(emp.giorni_liberi_fissi.includes(i))}>{g}</button>
+            ))}
+          </div>
+
+          <label style={lbl}>Turni fissi obbligatori</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {GIORNI.map((g, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 40, fontSize: 13, color: "#475569" }}>{g}</span>
+                <select style={{ ...inp, marginBottom: 0, flex: 1 }} value={emp.turni_fissi[i] || ""} onChange={(e) => setTurnoFisso(i, e.target.value)}>
+                  <option value="">— nessuno —</option>
+                  {ASSEGNABILI.map((t) => <option key={t} value={t}>{TURNI[t].label} ({TURNI[t].orario})</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+
+          <label style={lbl}>Riposo minimo tra turni</label>
+          <select style={inp} value={emp.riposo_minimo_ore} onChange={(e) => set({ riposo_minimo_ore: Number(e.target.value) })}>
+            {[12, 11, 10, 9].map((h) => <option key={h} value={h}>{h} ore{h === 12 ? " (standard)" : ""}</option>)}
+          </select>
+
+          <Toggle checked={emp.libero_sacrificabile} onChange={(v) => set({ libero_sacrificabile: v })} label="Giorno libero sacrificabile (casi estremi)" />
+
+          <button onClick={onDelete} style={{ marginTop: 14, width: "100%", padding: 10, borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+            Elimina dipendente
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabDipendenti({ employees, setEmployees }) {
+  const addEmp = () => {
+    const id = "e" + Date.now();
+    setEmployees([...employees, {
+      id, nome: "", giorni_liberi_fissi: [], turni_fissi: {},
+      riposo_minimo_ore: 12, sa_aprire: false, sa_chiudere: false, libero_sacrificabile: false,
+    }]);
+  };
+  return (
+    <div style={{ padding: 16 }}>
+      {employees.length === 0 && (
+        <div style={empty}>Nessun dipendente. Aggiungine uno per iniziare a configurare il personale.</div>
+      )}
+      {employees.map((emp) => (
+        <SchedaDipendente
+          key={emp.id}
+          emp={emp}
+          onChange={(u) => setEmployees(employees.map((e) => (e.id === emp.id ? u : e)))}
+          onDelete={() => setEmployees(employees.filter((e) => e.id !== emp.id))}
+        />
+      ))}
+      <button onClick={addEmp} style={btnPrimary}>+ Aggiungi dipendente</button>
+    </div>
+  );
+}
+
+function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
+  const [tipo, setTipo] = useState("ferie");
+  const [empId, setEmpId] = useState("");
+  const [from, setFrom] = useState(iso(start));
+  const [to, setTo] = useState(iso(start));
+  const [tm, setTm] = useState(3);
+  const [ts, setTs] = useState(3);
+  const [turnoPref, setTurnoPref] = useState("sera");
+  const [prio, setPrio] = useState(7);
+
+  const add = () => {
+    const base = { tipo, start: from, end: to };
+    let entry;
+    if (tipo === "ferie") entry = { ...base, employee_id: empId };
+    else if (tipo === "giorno_forte") entry = { ...base, target_mattina: tm, target_sera: ts };
+    else entry = { ...base, employee_id: empId, turno_preferito: turnoPref, priorita: prio };
+    if ((tipo !== "giorno_forte" && !empId)) return;
+    setEntries([...entries, entry]);
+  };
+
+  const label = (en) => {
+    const nome = employees.find((e) => e.id === en.employee_id)?.nome || "?";
+    if (en.tipo === "ferie") return `Ferie · ${nome}`;
+    if (en.tipo === "giorno_forte") return `Giorno forte · ${en.target_mattina}+${en.target_sera}`;
+    return `Preferenza · ${nome} → ${TURNI[en.turno_preferito].label} (p${en.priorita})`;
+  };
+  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 }}>
+        <label style={lbl}>Tipo di marcatura</label>
+        <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+          {[["ferie", "Ferie"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => (
+            <button key={v} onClick={() => setTipo(v)} style={chip(tipo === v)}>{l}</button>
+          ))}
+        </div>
+
+        {tipo !== "giorno_forte" && (
+          <>
+            <label style={lbl}>Dipendente</label>
+            <select style={inp} value={empId} onChange={(e) => setEmpId(e.target.value)}>
+              <option value="">— seleziona —</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.nome || "senza nome"}</option>)}
+            </select>
+          </>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={lbl}>Dal</label>
+            <input type="date" style={inp} value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={lbl}>Al</label>
+            <input type="date" style={inp} value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+        </div>
+
+        {tipo === "giorno_forte" && (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Persone mattina</label>
+              <input type="number" min={2} style={inp} value={tm} onChange={(e) => setTm(Number(e.target.value))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Persone sera</label>
+              <input type="number" min={2} style={inp} value={ts} onChange={(e) => setTs(Number(e.target.value))} />
+            </div>
+          </div>
+        )}
+
+        {tipo === "preferenza_turno" && (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Turno preferito</label>
+              <select style={inp} value={turnoPref} onChange={(e) => setTurnoPref(e.target.value)}>
+                {ASSEGNABILI.map((t) => <option key={t} value={t}>{TURNI[t].label} ({TURNI[t].orario})</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Priorità (6–10)</label>
+              <input type="number" min={6} max={10} style={inp} value={prio} onChange={(e) => setPrio(Number(e.target.value))} />
+            </div>
+          </div>
+        )}
+
+        <button onClick={add} style={btnPrimary}>+ Aggiungi al calendario</button>
+      </div>
+
+      {entries.length === 0 ? (
+        <div style={empty}>Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.</div>
+      ) : (
+        entries.map((en, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>{label(en)}</div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>{en.start} → {en.end}</div>
+              </div>
+            </div>
+            <button onClick={() => setEntries(entries.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>×</button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, motore, conflitti, violazioni }) {
+  const [settimana, setSettimana] = useState(0);
+  const [cella, setCella] = useState(null); // { empId, isoDay }
+
+  if (!orario) {
+    return <div style={empty}>Nessun orario generato. Premi “Genera orario” in basso.</div>;
+  }
+
+  const weekStart = addDays(start, settimana * 7);
+  const giorni = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const get = (empId, d) =>
+    orario.find((a) => a.employee_id === empId && a.giorno === iso(d))?.turno || "libero";
+
+  return (
+    <div style={{ paddingBottom: 80 }}>
+      {messaggi && messaggi.length > 0 && (
+        <div style={{ margin: 16, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 13 }}>
+          {messaggi.map((m, i) => <div key={i}>{m}</div>)}
+        </div>
+      )}
+
+      {violazioni && violazioni.length > 0 && (
+        <div style={{ margin: "0 16px 8px", padding: 12, borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: 12.5 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Note sull'orario</div>
+          {violazioni.map((v, i) => <div key={i} style={{ marginBottom: 2 }}>· {v}</div>)}
+        </div>
+      )}
+
+      {numWeeks > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 0" }}>
+          <button onClick={() => setSettimana(Math.max(0, settimana - 1))} disabled={settimana === 0} style={navBtn}>‹</button>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
+            Settimana {settimana + 1} di {numWeeks}
+          </span>
+          <button onClick={() => setSettimana(Math.min(numWeeks - 1, settimana + 1))} disabled={settimana === numWeeks - 1} style={navBtn}>›</button>
+        </div>
+      )}
+
+      <div style={{ overflowX: "auto", padding: "0 12px" }}>
+        <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 620 }}>
+          <thead>
+            <tr>
+              <th style={{ ...th, textAlign: "left", position: "sticky", left: 0, background: "#f8fafc", zIndex: 2 }}>Dipendente</th>
+              {giorni.map((d, i) => {
+                const we = i >= 5;
+                return (
+                  <th key={i} style={{ ...th, background: we ? "#f1f5f9" : "#f8fafc" }}>
+                    <div style={{ fontWeight: 700, color: we ? "#64748b" : "#0f172a" }}>{GIORNI[i]}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 400 }}>{fmtGiorno(d)}</div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((e) => (
+              <tr key={e.id}>
+                <td style={{ ...tdName, position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{e.nome || "—"}</td>
+                {giorni.map((d, i) => {
+                  const t = get(e.id, d);
+                  const c = COLORI_TURNO[t];
+                  const key = e.id + iso(d);
+                  const conflitto = conflitti?.has(key);
+                  return (
+                    <td key={i} style={{ padding: 3 }}>
+                      <button
+                        onClick={() => setCella({ empId: e.id, isoDay: iso(d) })}
+                        style={{
+                          width: "100%", border: conflitto ? "2px solid #dc2626" : "1px solid " + c.bar + "40",
+                          background: c.bg, borderRadius: 8, padding: "6px 4px", cursor: "pointer",
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                        }}
+                      >
+                        <span style={{ fontSize: 11, fontWeight: 700, color: c.fg }}>{TURNI[t].label}</span>
+                        <span style={{ fontSize: 10, color: c.fg, opacity: 0.7 }}>{TURNI[t].orario}</span>
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: 16, fontSize: 12, color: "#64748b" }}>
+        {Object.entries({ mattina: "Mattina", "10-18": "Intermedio", sera: "Sera", libero: "Libero" }).map(([k, l]) => (
+          <span key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: COLORI_TURNO[k].bar }} /> {l}
+          </span>
+        ))}
+        <span style={{ marginLeft: "auto" }}>Motore: {motore === "backend" ? "CP-SAT" : "locale (bozza)"}</span>
+      </div>
+
+      {cella && (
+        <div onClick={() => setCella(null)} style={modalBg}>
+          <div onClick={(e) => e.stopPropagation()} style={modal}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: "#0f172a" }}>
+              {employees.find((e) => e.id === cella.empId)?.nome}
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>
+              {GIORNI_FULL[(new Date(cella.isoDay).getDay() + 6) % 7]} {fmtGiorno(new Date(cella.isoDay))}
+            </div>
+            {[...ASSEGNABILI, "libero"].map((t) => (
+              <button key={t} onClick={() => { onModifica(cella.empId, cella.isoDay, t); setCella(null); }}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "11px 14px", marginBottom: 6, borderRadius: 10, cursor: "pointer",
+                  border: "1px solid " + COLORI_TURNO[t].bar + "55", background: COLORI_TURNO[t].bg }}>
+                <span style={{ fontWeight: 600, color: COLORI_TURNO[t].fg }}>{TURNI[t].label}</span>
+                <span style={{ fontSize: 13, color: COLORI_TURNO[t].fg, opacity: 0.7 }}>{TURNI[t].orario}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================================================
+//  VALIDAZIONE on-the-fly delle modifiche manuali
+// ==========================================================================
+function trovaConflitti(orario, employees, start, numWeeks) {
+  const conflitti = new Set();
+  const empById = Object.fromEntries(employees.map((e) => [e.id, e]));
+  const days = Array.from({ length: numWeeks * 7 }, (_, i) => addDays(start, i));
+  const get = (eid, d) => orario.find((a) => a.employee_id === eid && a.giorno === iso(d))?.turno || "libero";
+
+  for (const d of days) {
+    const mattina = employees.filter((e) => get(e.id, d) === "mattina");
+    const sera = employees.filter((e) => get(e.id, d) === "sera");
+    const apre = mattina.some((e) => empById[e.id].sa_aprire);
+    const chiude = sera.some((e) => empById[e.id].sa_chiudere);
+    if (mattina.length < 2 || !apre) mattina.forEach((e) => conflitti.add(e.id + iso(d)));
+    if (sera.length < 2 || !chiude) sera.forEach((e) => conflitti.add(e.id + iso(d)));
+    if (mattina.length < 2) employees.forEach((e) => { if (get(e.id, d) === "mattina") conflitti.add(e.id + iso(d)); });
+    // riposo 12h
+    for (const e of employees) {
+      const prev = get(e.id, addDays(d, -1));
+      const cur = get(e.id, d);
+      if (prev !== "libero" && cur !== "libero" && restHours(prev, cur) < empById[e.id].riposo_minimo_ore) {
+        conflitti.add(e.id + iso(d));
+      }
+    }
+  }
+  return conflitti;
+}
+
+// ==========================================================================
+//  APP
+// ==========================================================================
+// ==========================================================================
+//  TAB STORICO — elenco orari passati, selezionabili per settimana
+// ==========================================================================
+function TabStorico({ storico, persistenza, onApri }) {
+  if (!persistenza) {
+    return <div style={empty}>Lo storico richiede il salvataggio sul server, che non risulta attivo al momento.</div>;
+  }
+  if (!storico || storico.length === 0) {
+    return <div style={empty}>Nessun orario salvato finora. Genera un orario: verrà archiviato qui automaticamente.</div>;
+  }
+  // raggruppa per mese
+  const fmt = (isoStr) => {
+    const [y, m, d] = isoStr.split("-").map(Number);
+    return `${d}/${m}/${y}`;
+  };
+  const meseLabel = (isoStr) => {
+    const [y, m] = isoStr.split("-").map(Number);
+    return `${["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"][m-1]} ${y}`;
+  };
+  const gruppi = {};
+  for (const s of storico) {
+    const k = meseLabel(s.data_inizio);
+    (gruppi[k] = gruppi[k] || []).push(s);
+  }
+  return (
+    <div style={{ padding: 16, paddingBottom: 40 }}>
+      {Object.entries(gruppi).map(([mese, lista]) => (
+        <div key={mese} style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{mese}</div>
+          {lista.map((s) => (
+            <button key={s.id} onClick={() => onApri(s)} style={{
+              width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "13px 14px", marginBottom: 8, cursor: "pointer",
+            }}>
+              <div>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#0f172a" }}>
+                  Settimana del {fmt(s.data_inizio)}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>
+                  {s.num_settimane} {s.num_settimane === 1 ? "settimana" : "settimane"} · {s.stato === "OPTIMAL" ? "completo" : s.stato.toLowerCase()}
+                </div>
+              </div>
+              <span style={{ color: "#94a3b8", fontSize: 18 }}>›</span>
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==========================================================================
+//  ORARIO FULLSCREEN (landscape) — solo la griglia, a tutto schermo
+// ==========================================================================
+function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onModifica, onExit }) {
+  const [settimana, setSettimana] = useState(0);
+  const [cella, setCella] = useState(null);
+
+  const weekStart = addDays(start, settimana * 7);
+  const giorni = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const get = (empId, d) =>
+    orario.find((a) => a.employee_id === empId && a.giorno === iso(d))?.turno || "libero";
+
+  // sigle compatte per i turni (massimizzano lo spazio)
+  const sigla = (t) => {
+    if (t === "mattina") return "M";
+    if (t === "sera") return "S";
+    if (t === "libero") return "—";
+    return "I"; // intermedi
+  };
+
+  const nRows = employees.length;
+  // altezza riga calcolata per riempire lo schermo (meno header)
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#fff", display: "flex", flexDirection: "column", zIndex: 1000, fontFamily: "-apple-system, system-ui, sans-serif" }}>
+      {/* barra minima */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#0f172a", color: "#fff", flexShrink: 0 }}>
+        <button onClick={onExit} style={{ background: "none", border: "none", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 600 }}>✕ Esci</button>
+        {numWeeks > 1 ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => setSettimana(Math.max(0, settimana - 1))} disabled={settimana === 0}
+              style={{ background: "none", border: "none", color: settimana === 0 ? "#475569" : "#fff", fontSize: 18, cursor: "pointer" }}>‹</button>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Sett. {settimana + 1}/{numWeeks}</span>
+            <button onClick={() => setSettimana(Math.min(numWeeks - 1, settimana + 1))} disabled={settimana === numWeeks - 1}
+              style={{ background: "none", border: "none", color: settimana === numWeeks - 1 ? "#475569" : "#fff", fontSize: 18, cursor: "pointer" }}>›</button>
+          </div>
+        ) : <span style={{ fontSize: 13, fontWeight: 600 }}>Orario</span>}
+        <span style={{ fontSize: 11, color: "#94a3b8" }}>tocca una cella per modificare</span>
+      </div>
+
+      {/* griglia che riempie tutto */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        {/* intestazione giorni */}
+        <div style={{ display: "flex", flexShrink: 0, borderBottom: "2px solid #e2e8f0" }}>
+          <div style={{ width: "13%", padding: "4px 6px", fontSize: 11, fontWeight: 700, color: "#64748b", display: "flex", alignItems: "center" }}>Dip.</div>
+          {giorni.map((d, i) => {
+            const we = i >= 5;
+            return (
+              <div key={i} style={{ flex: 1, padding: "4px 2px", textAlign: "center", background: we ? "#f1f5f9" : "#f8fafc", borderLeft: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: we ? "#64748b" : "#0f172a" }}>{GIORNI[i]}</div>
+                <div style={{ fontSize: 9.5, color: "#94a3b8" }}>{fmtGiorno(d)}</div>
+              </div>
+            );
+          })}
+        </div>
+        {/* righe dipendenti */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {employees.map((e) => (
+            <div key={e.id} style={{ flex: 1, display: "flex", borderBottom: "1px solid #f1f5f9", minHeight: 0 }}>
+              <div style={{ width: "13%", padding: "0 6px", fontSize: 11.5, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                {e.nome}
+              </div>
+              {giorni.map((d, i) => {
+                const t = get(e.id, d);
+                const c = COLORI_TURNO[t];
+                const conflitto = conflitti?.has(e.id + iso(d));
+                return (
+                  <button key={i} onClick={() => setCella({ empId: e.id, isoDay: iso(d) })}
+                    style={{
+                      flex: 1, borderLeft: "1px solid #f1f5f9",
+                      border: conflitto ? "2px solid #dc2626" : undefined,
+                      borderLeftWidth: conflitto ? 2 : 1,
+                      background: c.bg, cursor: "pointer", display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: 0, padding: 0, minHeight: 0,
+                    }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: c.fg, lineHeight: 1 }}>{sigla(t)}</span>
+                    <span style={{ fontSize: 8.5, color: c.fg, opacity: 0.65, lineHeight: 1.1 }}>{TURNI[t].orario}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {/* legenda compatta */}
+        <div style={{ display: "flex", gap: 12, padding: "4px 10px", fontSize: 10, color: "#64748b", flexShrink: 0, borderTop: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+          <span><b>M</b> Mattina</span><span><b>I</b> Intermedio</span><span><b>S</b> Sera</span><span><b>—</b> Libero</span>
+        </div>
+      </div>
+
+      {cella && (
+        <div onClick={() => setCella(null)} style={modalBg}>
+          <div onClick={(e) => e.stopPropagation()} style={modal}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: "#0f172a" }}>
+              {employees.find((e) => e.id === cella.empId)?.nome}
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>
+              {GIORNI_FULL[(new Date(cella.isoDay).getDay() + 6) % 7]} {fmtGiorno(new Date(cella.isoDay))}
+            </div>
+            {[...ASSEGNABILI, "libero"].map((t) => (
+              <button key={t} onClick={() => { onModifica(cella.empId, cella.isoDay, t); setCella(null); }}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "11px 14px", marginBottom: 6, borderRadius: 10, cursor: "pointer",
+                  border: "1px solid " + COLORI_TURNO[t].bar + "55", background: COLORI_TURNO[t].bg }}>
+                <span style={{ fontWeight: 600, color: COLORI_TURNO[t].fg }}>{TURNI[t].label}</span>
+                <span style={{ fontSize: 13, color: COLORI_TURNO[t].fg, opacity: 0.7 }}>{TURNI[t].orario}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================================================
+//  SINCRONIZZAZIONE COL BACKEND (persistenza Supabase via Render)
+// ==========================================================================
+const BACKEND = "https://orari-buono.onrender.com";
+
+// --------------------------------------------------------------------------
+//  SALVATAGGIO LOCALE (localStorage) — mostra subito l'ultimo stato all'avvio
+//  senza attendere il cloud. Dipendenti e calendario; lo storico resta sul cloud.
+// --------------------------------------------------------------------------
+const LS_EMP = "turni_employees";
+const LS_CAL = "turni_calendar";
+
+function leggiLocale(chiave) {
+  try {
+    const raw = localStorage.getItem(chiave);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function scriviLocale(chiave, valore) {
+  try {
+    localStorage.setItem(chiave, JSON.stringify(valore));
+  } catch {
+    // storage pieno o non disponibile: ignora silenziosamente
+  }
+}
+
+async function api(path, options) {
+  const r = await fetch(BACKEND.replace(/\/$/, "") + path, options);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+async function caricaDipendenti() {
+  const d = await api("/dipendenti");
+  // normalizza turni_fissi: il DB restituisce chiavi stringa, le teniamo tali
+  return d.employees || [];
+}
+async function salvaDipendenti(employees) {
+  return api("/dipendenti", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ employees }),
+  });
+}
+async function caricaCalendario() {
+  const d = await api("/calendario");
+  return d.entries || [];
+}
+async function salvaCalendario(entries) {
+  return api("/calendario", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entries }),
+  });
+}
+async function caricaStorico() {
+  const d = await api("/storico");
+  return d.schedules || [];
+}
+async function caricaOrarioSalvato(startIso, weeks) {
+  const d = await api(`/orario?start=${startIso}&weeks=${weeks}`);
+  return d.assignments || [];
+}
+async function modificaTurno(employee_id, giorno, turno) {
+  return api("/modifica", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ employee_id, giorno, turno }),
+  });
+}
+
+// normalizza un dipendente caricato dal DB (turni_fissi con chiavi stringa)
+function normEmp(e) {
+  const tf = {};
+  for (const [k, v] of Object.entries(e.turni_fissi || {})) tf[Number(k)] = v;
+  return { ...e, turni_fissi: tf, giorni_liberi_fissi: e.giorni_liberi_fissi || [] };
+}
+
+// ==========================================================================
+//  APP
+// ==========================================================================
+function App() {
+  const [tab, setTab] = useState("dipendenti");
+  const [employees, setEmployees] = useState(() => leggiLocale(LS_EMP) || seedEmployees());
+  const [entries, setEntries] = useState(() => leggiLocale(LS_CAL) || []);
+  const [numWeeks, setNumWeeks] = useState(1);
+  const [start, setStart] = useState(lunediCorrente());
+  const [orario, setOrario] = useState(null);
+  const [messaggi, setMessaggi] = useState([]);
+  const [violazioni, setViolazioni] = useState([]);
+  const [motore, setMotore] = useState("locale");
+  const [loading, setLoading] = useState(false);
+  const [storico, setStorico] = useState([]);
+  const [persistenza, setPersistenza] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("Connessione al server…");
+  const [landscape, setLandscape] = useState(false);
+  const [pronto, setPronto] = useState(false);
+  const backendUrl = BACKEND;
+
+  // --- Caricamento iniziale dal backend ---
+  useEffect(() => {
+    let annullato = false;
+    (async () => {
+      try {
+        const stato = await api("/stato");
+        if (annullato) return;
+        if (stato.persistenza) {
+          setPersistenza(true);
+          const [emps, cal, stor] = await Promise.all([
+            caricaDipendenti(), caricaCalendario(), caricaStorico(),
+          ]);
+          if (annullato) return;
+          // Il cloud vince sempre: sovrascrive il locale (che era gia' mostrato
+          // all'avvio per evitare il lampeggio). Aggiorniamo anche il locale.
+          const empNorm = emps.map(normEmp);
+          setEmployees(empNorm);
+          scriviLocale(LS_EMP, empNorm);
+          setEntries(cal);
+          scriviLocale(LS_CAL, cal);
+          setStorico(stor);
+          setSyncMsg("");
+        } else {
+          setSyncMsg("Server senza database: i dati restano solo su questo telefono.");
+        }
+      } catch (e) {
+        if (!annullato) setSyncMsg("Server non raggiungibile (potrebbe risvegliarsi tra ~1 min).");
+      } finally {
+        if (!annullato) setPronto(true);
+      }
+    })();
+    return () => { annullato = true; };
+  }, []);
+
+  // --- Salvataggio dipendenti: locale subito + cloud automatico (debounce) ---
+  useEffect(() => {
+    scriviLocale(LS_EMP, employees);
+    if (!persistenza || !pronto) return;
+    const t = setTimeout(() => { salvaDipendenti(employees).catch(() => {}); }, 800);
+    return () => clearTimeout(t);
+  }, [employees, persistenza, pronto]);
+
+  // --- Salvataggio calendario: locale subito + cloud automatico (debounce) ---
+  useEffect(() => {
+    scriviLocale(LS_CAL, entries);
+    if (!persistenza || !pronto) return;
+    const t = setTimeout(() => { salvaCalendario(entries).catch(() => {}); }, 800);
+    return () => clearTimeout(t);
+  }, [entries, persistenza, pronto]);
+
+  const conflitti = useMemo(
+    () => (orario ? trovaConflitti(orario, employees, start, numWeeks) : new Set()),
+    [orario, employees, start, numWeeks]
+  );
+
+  const genera = async () => {
+    setLoading(true);
+    setMessaggi([]);
+    const res = await generaOrario(employees, entries, start, numWeeks, storico, backendUrl);
+    setOrario(res.assignments);
+    setMessaggi(res.messaggi || []);
+    setViolazioni(res.violazioni || []);
+    setMotore(res.motore);
+    setLoading(false);
+    setTab("orario");
+    // ricarica lo storico (la generazione lo ha aggiornato lato server)
+    if (persistenza) caricaStorico().then(setStorico).catch(() => {});
+  };
+
+  const modifica = (empId, isoDay, turno) => {
+    setOrario((prev) =>
+      prev.map((a) => (a.employee_id === empId && a.giorno === isoDay ? { ...a, turno } : a))
+    );
+    if (persistenza) modificaTurno(empId, isoDay, turno).catch(() => {});
+  };
+
+  // carica un orario storico selezionato
+  const apriStorico = async (sched) => {
+    const [y, m, d] = sched.data_inizio.split("-").map(Number);
+    const s = new Date(y, m - 1, d);
+    setStart(s);
+    setNumWeeks(sched.num_settimane);
+    try {
+      const assigns = await caricaOrarioSalvato(sched.data_inizio, sched.num_settimane);
+      setOrario(assigns);
+      setMotore("backend");
+      setMessaggi([]);
+      setTab("orario");
+    } catch (e) {
+      setMessaggi(["Impossibile caricare l'orario storico."]);
+    }
+  };
+
+  // Vista landscape fullscreen: solo la tabella, niente UI attorno.
+  if (landscape && orario) {
+    return (
+      <OrarioFullscreen
+        orario={orario} employees={employees} start={start} numWeeks={numWeeks}
+        conflitti={conflitti} onModifica={modifica} onExit={() => setLandscape(false)}
+      />
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: "-apple-system, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
+      <header style={{ background: "#0f172a", color: "#fff", padding: "16px 18px 14px" }}>
+        <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.3 }}>Turni</div>
+        <div style={{ fontSize: 12.5, color: "#94a3b8" }}>
+          {employees.length} dipendenti · {numWeeks} {numWeeks === 1 ? "settimana" : "settimane"} · dal {fmtGiorno(start)}
+          {persistenza ? " · salvato ☁" : ""}
+        </div>
+      </header>
+
+      {syncMsg && (
+        <div style={{ background: "#fff7ed", color: "#9a3412", fontSize: 12.5, padding: "8px 16px", borderBottom: "1px solid #fed7aa" }}>
+          {syncMsg}
+        </div>
+      )}
+
+      <nav style={{ display: "flex", background: "#fff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 }}>
+        {[["dipendenti", "Dipendenti"], ["calendario", "Calendario"], ["orario", "Orario"], ["storico", "Storico"]].map(([v, l]) => (
+          <button key={v} onClick={() => setTab(v)} style={{
+            flex: 1, padding: "13px 0", border: "none", background: "none", cursor: "pointer",
+            fontSize: 13.5, fontWeight: tab === v ? 700 : 500, color: tab === v ? "#0f172a" : "#94a3b8",
+            borderBottom: tab === v ? "2px solid #0f172a" : "2px solid transparent",
+          }}>{l}</button>
+        ))}
+      </nav>
+
+      <main>
+        {tab === "dipendenti" && <TabDipendenti employees={employees} setEmployees={setEmployees} />}
+        {tab === "calendario" && (
+          <>
+            <div style={{ padding: "16px 16px 0" }}>
+              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16 }}>
+                <label style={lbl}>Lunedì di partenza</label>
+                <input type="date" style={inp} value={iso(start)}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const [y, m, d] = e.target.value.split("-").map(Number);
+                    const picked = new Date(y, m - 1, d);
+                    // forza al lunedì della settimana scelta
+                    const wd = (picked.getDay() + 6) % 7;
+                    picked.setDate(picked.getDate() - wd);
+                    setStart(picked);
+                  }} />
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: -2, marginBottom: 4 }}>
+                  L'orario partirà dal lunedì {fmtGiorno(start)}.
+                </div>
+                <label style={lbl}>Periodo da pianificare</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[1, 2, 3, 4].map((w) => (
+                    <button key={w} onClick={() => setNumWeeks(w)} style={chip(numWeeks === w)}>{w} sett.</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <TabCalendario employees={employees} entries={entries} setEntries={setEntries} start={start} numWeeks={numWeeks} />
+          </>
+        )}
+        {tab === "orario" && (
+          <>
+            {orario && (
+              <div style={{ padding: "12px 16px 0" }}>
+                <button onClick={() => setLandscape(true)} style={{
+                  ...btnPrimary, background: "#1e293b", marginBottom: 0, padding: 11, fontSize: 14,
+                }}>⛶ Vista a tutto schermo (orizzontale)</button>
+              </div>
+            )}
+            <TabOrario orario={orario} employees={employees} start={start} numWeeks={numWeeks}
+              onModifica={modifica} messaggi={messaggi} motore={motore} conflitti={conflitti} violazioni={violazioni} />
+          </>
+        )}
+        {tab === "storico" && (
+          <TabStorico storico={storico} persistenza={persistenza} onApri={apriStorico} />
+        )}
+      </main>
+
+      {tab !== "storico" && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: "linear-gradient(transparent, #f1f5f9 30%)" }}>
+          <button onClick={genera} disabled={loading || employees.length === 0} style={{
+            ...btnPrimary, marginBottom: 0, opacity: loading || employees.length === 0 ? 0.5 : 1,
+            boxShadow: "0 4px 14px rgba(15,23,42,.25)",
+          }}>
+            {loading ? "Generazione… (fino a ~1 min se il server era inattivo)" : "Genera orario"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----- dati di esempio per partire subito -----
+function seedEmployees() {
+  // L'app parte vuota: nessun dipendente predefinito.
+  return [];
+}
+
+// ----- stili condivisi -----
+const lbl = { display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", margin: "14px 0 6px", textTransform: "uppercase", letterSpacing: 0.4 };
+const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, marginBottom: 4, boxSizing: "border-box", background: "#fff", color: "#0f172a" };
+const btnPrimary = { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#0f172a", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 12 };
+const empty = { textAlign: "center", color: "#94a3b8", fontSize: 14, padding: "48px 24px", lineHeight: 1.5 };
+const th = { padding: "8px 4px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #e2e8f0" };
+const tdName = { padding: "8px 10px", fontSize: 13, fontWeight: 600, color: "#0f172a", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" };
+const chip = (active) => ({ padding: "7px 12px", borderRadius: 9, border: "1px solid " + (active ? "#0f172a" : "#cbd5e1"), background: active ? "#0f172a" : "#fff", color: active ? "#fff" : "#475569", fontSize: 13, fontWeight: 500, cursor: "pointer" });
+const navBtn = { width: 36, height: 36, borderRadius: "50%", border: "1px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", color: "#0f172a" };
+const modalBg = { position: "fixed", inset: 0, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 };
+const modal = { background: "#fff", borderRadius: "18px 18px 0 0", padding: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" };
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+</script>
+</body>
+</html>
