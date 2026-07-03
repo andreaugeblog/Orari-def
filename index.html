@@ -1046,17 +1046,24 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
       }
     }
     const disp = giorni.filter((d) => !isFerie(e.id, d));
+    const nFerie = 7 - disp.length;
     if (disp.length > 0 && disp.every((d) => get(e.id, d) !== "-")) {
       const nLib = disp.filter((d) => get(e.id, d) === "libero").length;
-      if (nLib === 0)
-        rossi.push(`${nome} non ha nessun giorno libero questa settimana.`);
-      else if (nLib === 1 && disp.length >= 2) {
+      const quota = Math.max(0, Math.min(2 - nFerie, disp.length));
+      const riposi = nFerie + nLib;
+      if (riposi === 0)
+        rossi.push(`${nome} non ha nessun giorno di riposo questa settimana.`);
+      else if (riposi === 1 && disp.length >= 2) {
         if (e.libero_sacrificabile)
-          gialli.push(`${nome} ha un solo giorno libero \u2014 consentito dalle sue impostazioni (libero sacrificabile).`);
+          gialli.push(`${nome} ha un solo giorno di riposo \u2014 consentito dalle sue impostazioni (libero sacrificabile).`);
         else
-          rossi.push(`${nome} ha un solo giorno libero e non ha il "libero sacrificabile" attivo.`);
-      } else if (nLib > 2)
-        gialli.push(`${nome} ha ${nLib} giorni liberi (di norma il massimo \xE8 2).`);
+          rossi.push(`${nome} ha un solo giorno di riposo e non ha il "libero sacrificabile" attivo.`);
+      } else if (nLib > quota) {
+        if (nFerie > 0)
+          gialli.push(`${nome} ha ${nLib} ${nLib === 1 ? "giorno libero" : "giorni liberi"} oltre alle ferie: le ferie coprono gi\xE0 il riposo settimanale.`);
+        else
+          gialli.push(`${nome} ha ${nLib} giorni liberi (di norma il massimo \xE8 2).`);
+      }
     }
     let run = (prevInfo.tail || {})[e.id] || 0;
     let maxRun = 0;

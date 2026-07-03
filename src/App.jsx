@@ -1073,19 +1073,28 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
       }
     }
 
-    // giorni liberi (valutati solo a riga completa, per evitare falsi allarmi)
+    // riposo settimanale (valutato solo a riga completa, per evitare falsi
+    // allarmi). Le ferie ASSORBONO la quota di 2 riposi: chi ha 2+ giorni di
+    // ferie non ha bisogno di liberi extra.
     const disp = giorni.filter((d) => !isFerie(e.id, d));
+    const nFerie = 7 - disp.length;
     if (disp.length > 0 && disp.every((d) => get(e.id, d) !== "-")) {
       const nLib = disp.filter((d) => get(e.id, d) === "libero").length;
-      if (nLib === 0)
-        rossi.push(`${nome} non ha nessun giorno libero questa settimana.`);
-      else if (nLib === 1 && disp.length >= 2) {
+      const quota = Math.max(0, Math.min(2 - nFerie, disp.length));
+      const riposi = nFerie + nLib; // riposi totali della settimana (ferie incluse)
+      if (riposi === 0)
+        rossi.push(`${nome} non ha nessun giorno di riposo questa settimana.`);
+      else if (riposi === 1 && disp.length >= 2) {
         if (e.libero_sacrificabile)
-          gialli.push(`${nome} ha un solo giorno libero — consentito dalle sue impostazioni (libero sacrificabile).`);
+          gialli.push(`${nome} ha un solo giorno di riposo — consentito dalle sue impostazioni (libero sacrificabile).`);
         else
-          rossi.push(`${nome} ha un solo giorno libero e non ha il "libero sacrificabile" attivo.`);
-      } else if (nLib > 2)
-        gialli.push(`${nome} ha ${nLib} giorni liberi (di norma il massimo è 2).`);
+          rossi.push(`${nome} ha un solo giorno di riposo e non ha il "libero sacrificabile" attivo.`);
+      } else if (nLib > quota) {
+        if (nFerie > 0)
+          gialli.push(`${nome} ha ${nLib} ${nLib === 1 ? "giorno libero" : "giorni liberi"} oltre alle ferie: le ferie coprono già il riposo settimanale.`);
+        else
+          gialli.push(`${nome} ha ${nLib} giorni liberi (di norma il massimo è 2).`);
+      }
     }
 
     // giorni di lavoro consecutivi (contando la coda della settimana precedente)
