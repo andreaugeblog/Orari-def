@@ -281,7 +281,7 @@ function garantisciDueLiberiAdiacenti(assign, employees, days, entries, messaggi
 // ==========================================================================
 //  PROVA A USARE IL BACKEND, ALTRIMENTI IL SOLVER JS
 // ==========================================================================
-async function generaOrario(employees, entries, start, numWeeks, storico, backendUrl) {
+async function generaOrario(employees, entries, start, numWeeks, storico, backendUrl, giorniRinforzo) {
   if (backendUrl) {
     try {
       const payload = {
@@ -294,6 +294,7 @@ async function generaOrario(employees, entries, start, numWeeks, storico, backen
         calendar_entries: entries,
         start: iso(start),
         num_weeks: numWeeks,
+        giorni_rinforzo: giorniRinforzo || [2, 3, 4],
         // Lo storico per l'equità lo legge il backend direttamente dal database
         // (ultimi 3 mesi). Non lo inviamo: lo stato locale "storico" contiene
         // i metadati degli orari (schedules), non le assegnazioni.
@@ -745,7 +746,7 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
     }
     const base = { tipo, start: from, end: to };
     let entry;
-    if (tipo === "ferie") entry = { ...base, employee_id: empId };
+    if (tipo === "ferie" || tipo === "malattia") entry = { ...base, employee_id: empId };
     else entry = { ...base, employee_id: empId, turno_preferito: turnoPref, priorita: prio };
     if (!empId) return;
     setEntries([...entries, entry]);
@@ -754,17 +755,18 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
   const label = (en) => {
     const nome = employees.find((e) => e.id === en.employee_id)?.nome || "?";
     if (en.tipo === "ferie") return `Ferie · ${nome}`;
+    if (en.tipo === "malattia") return `Malattia · ${nome}`;
     if (en.tipo === "giorno_forte") return `Giorno forte · ${en.target_mattina}+${en.target_sera}`;
     return `Preferenza · ${nome} → ${TURNI[en.turno_preferito].label} (p${en.priorita})`;
   };
-  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
+  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "malattia" ? "#ef4444" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
 
   return (
     <div style={{ padding: 16 }}>
       <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 }}>
         <label style={lbl}>Tipo di marcatura</label>
         <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
-          {[["ferie", "Ferie"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => (
+          {[["ferie", "Ferie"], ["malattia", "Malattia"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => (
             <button key={v} onClick={() => setTipo(v)} style={chip(tipo === v)}>{l}</button>
           ))}
         </div>
@@ -1021,8 +1023,8 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
   const get = (eid, d) =>
     orario.find((a) => a.employee_id === eid && a.giorno === iso(d))?.turno || "-";
   const isFerie = (eid, d) =>
-    entries.some((en) => en.tipo === "ferie" && en.employee_id === eid &&
-      en.start <= iso(d) && iso(d) <= en.end);
+    entries.some((en) => (en.tipo === "ferie" || en.tipo === "malattia") &&
+      en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
   const gLabel = (d) => `${GIORNI[(d.getDay() + 6) % 7]} ${fmtGiorno(d)}`;
   const lavoro = (t) => ASSEGNABILI.includes(t);
 
@@ -1053,7 +1055,7 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
     for (const d of giorni) {
       const t = get(e.id, d);
       if (isFerie(e.id, d) && lavoro(t))
-        rossi.push(`${nome} è in ferie ${gLabel(d)} ma ha un turno assegnato.`);
+        rossi.push(`${nome} è in ferie o malattia ${gLabel(d)} ma ha un turno assegnato.`);
     }
 
     // riposo tra giorni consecutivi (inclusa la domenica della settimana prima)
@@ -1413,6 +1415,7 @@ function TabStatistiche({ persistenza }) {
   const [emps, setEmps] = useState([]);
   const [anno, setAnno] = useState(new Date().getFullYear());
   const [ferie, setFerie] = useState({});
+  const [malattia, setMalattia] = useState({});
   const [anniFerie, setAnniFerie] = useState([]);
   const [caricamento, setCaricamento] = useState(false);
 
@@ -1450,6 +1453,11 @@ function TabStatistiche({ persistenza }) {
         if (annullato) return;
         setFerie(d.ferie || {});
         setAnniFerie(d.anni || []);
+      } catch { /* ignora */ }
+      try {
+        const m = await caricaStatisticheMalattia(anno);
+        if (annullato) return;
+        setMalattia(m.malattia || {});
       } catch { /* ignora */ }
     })();
     return () => { annullato = true; };
@@ -1548,6 +1556,23 @@ function TabStatistiche({ persistenza }) {
         ))}
         {emps.length === 0 && <div style={{ fontSize: 13, color: "#94a3b8", padding: "10px 0" }}>Nessun dato.</div>}
       </div>
+
+      {/* malattia per anno (stesso selettore anno delle ferie) */}
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" }}>Malattia per anno solare</div>
+      <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 8 }}>Conta tutti i giorni di malattia dell'anno {anno}.</div>
+      <div>
+        {emps.map((e) => (
+          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" }}>
+              {e.nome}{e.archiviato ? " (archivio)" : ""}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              {malattia[e.id] || 0} <span style={{ fontSize: 12, fontWeight: 400, color: "#94a3b8" }}>giorni</span>
+            </span>
+          </div>
+        ))}
+        {emps.length === 0 && <div style={{ fontSize: 13, color: "#94a3b8", padding: "10px 0" }}>Nessun dato.</div>}
+      </div>
     </div>
   );
 }
@@ -1566,6 +1591,7 @@ const BACKEND = "https://orari-buono.onrender.com";
 // --------------------------------------------------------------------------
 const LS_EMP = "turni_employees";
 const LS_CAL = "turni_calendar";
+const LS_RINFORZO = "turni_rinforzo";   // giorni settimana con 3 in fascia mattina
 
 function leggiLocale(chiave) {
   try {
@@ -1635,6 +1661,10 @@ async function caricaStatisticheFerie(anno) {
   const d = await api(`/statistiche-ferie?anno=${anno}`);
   return d;  // { ferie, anni }
 }
+async function caricaStatisticheMalattia(anno) {
+  const d = await api(`/statistiche-malattia?anno=${anno}`);
+  return d;  // { malattia }
+}
 
 // normalizza un dipendente caricato dal DB (turni_fissi con chiavi stringa)
 function normEmp(e) {
@@ -1654,6 +1684,9 @@ export default function App() {
   const [start, setStart] = useState(lunediProssimo());
   const [assenze, setAssenze] = useState([]);  // [{employee_id, giorni:Set<iso>}] usa-e-getta per la generazione
   const [presenze, setPresenze] = useState([]); // [{employee_id, giorni:{iso:turno}}] presenze obbligate usa-e-getta
+  // giorni della settimana (0=lun..6=dom) in cui servono 3 persone in fascia
+  // mattina (2 apertura + 1 intermedio). Regola implicita: mer/gio/ven.
+  const [giorniRinforzo, setGiorniRinforzo] = useState(() => leggiLocale(LS_RINFORZO) || [2, 3, 4]);
   const [bozzaManuale, setBozzaManuale] = useState(false); // true = "Crea orario" in corso
   const [salvataggioBozza, setSalvataggioBozza] = useState(false);
   const [prevInfo, setPrevInfo] = useState({ vigilia: {}, tail: {} }); // settimana precedente (per riposo/consecutivi)
@@ -1713,6 +1746,9 @@ export default function App() {
     return () => clearTimeout(t);
   }, [employees, persistenza, pronto]);
 
+  // --- Salvataggio giorni di rinforzo (solo locale: viaggiano nel payload) ---
+  useEffect(() => { scriviLocale(LS_RINFORZO, giorniRinforzo); }, [giorniRinforzo]);
+
   // --- Salvataggio calendario: locale subito + cloud automatico (debounce) ---
   useEffect(() => {
     scriviLocale(LS_CAL, entries);
@@ -1752,7 +1788,7 @@ export default function App() {
       }
     }
     const entriesConAssenze = [...entries, ...entryAssenze];
-    const res = await generaOrario(employees, entriesConAssenze, start, numWeeks, storico, backendUrl);
+    const res = await generaOrario(employees, entriesConAssenze, start, numWeeks, storico, backendUrl, giorniRinforzo);
     setOrario(res.assignments);
     setMessaggi(res.messaggi || []);
     setViolazioni(res.violazioni || []);
@@ -1796,8 +1832,8 @@ export default function App() {
   const creaManuale = async () => {
     const giorni = Array.from({ length: 7 }, (_, i) => addDays(start, i));
     const inFerie = (eid, d) =>
-      entries.some((en) => en.tipo === "ferie" && en.employee_id === eid &&
-        en.start <= iso(d) && iso(d) <= en.end);
+      entries.some((en) => (en.tipo === "ferie" || en.tipo === "malattia") &&
+        en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
     const bozza = [];
     for (const e of employees)
       for (const d of giorni)
@@ -1985,6 +2021,23 @@ export default function App() {
 
                 <SelettorePresenze employees={employees} presenze={presenze} setPresenze={setPresenze}
                   start={start} numWeeks={numWeeks} />
+
+                <label style={lbl}>Giorni con 3 persone (fascia mattina)</label>
+                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
+                  In questi giorni l'algoritmo affianca un turno intermedio ai 2 dell'apertura,
+                  così da coprire anche il passaggio alla sera. Preimpostati: mer, gio e ven.
+                </div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {GIORNI.map((g, i) => (
+                    <button key={i}
+                      onClick={() => setGiorniRinforzo(
+                        giorniRinforzo.includes(i)
+                          ? giorniRinforzo.filter((x) => x !== i)
+                          : [...giorniRinforzo, i].sort()
+                      )}
+                      style={chip(giorniRinforzo.includes(i))}>{g}</button>
+                  ))}
+                </div>
               </div>
             </div>
             <TabCalendario employees={employees} entries={entries} setEntries={setEntries} start={start} numWeeks={numWeeks} />

@@ -543,7 +543,7 @@ function garantisciDueLiberiAdiacenti(assign, employees, days, entries, messaggi
     }
   }
 }
-async function generaOrario(employees, entries, start, numWeeks, storico, backendUrl) {
+async function generaOrario(employees, entries, start, numWeeks, storico, backendUrl, giorniRinforzo) {
   if (backendUrl) {
     try {
       const payload = {
@@ -555,6 +555,7 @@ async function generaOrario(employees, entries, start, numWeeks, storico, backen
         calendar_entries: entries,
         start: iso(start),
         num_weeks: numWeeks,
+        giorni_rinforzo: giorniRinforzo || [2, 3, 4],
         // Lo storico per l'equità lo legge il backend direttamente dal database
         // (ultimi 3 mesi). Non lo inviamo: lo stato locale "storico" contiene
         // i metadati degli orari (schedules), non le assegnazioni.
@@ -883,7 +884,7 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
     }
     const base = { tipo, start: from, end: to };
     let entry;
-    if (tipo === "ferie") entry = __spreadProps(__spreadValues({}, base), { employee_id: empId });
+    if (tipo === "ferie" || tipo === "malattia") entry = __spreadProps(__spreadValues({}, base), { employee_id: empId });
     else entry = __spreadProps(__spreadValues({}, base), { employee_id: empId, turno_preferito: turnoPref, priorita: prio });
     if (!empId) return;
     setEntries([...entries, entry]);
@@ -892,11 +893,12 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
     var _a;
     const nome = ((_a = employees.find((e) => e.id === en.employee_id)) == null ? void 0 : _a.nome) || "?";
     if (en.tipo === "ferie") return `Ferie \xB7 ${nome}`;
+    if (en.tipo === "malattia") return `Malattia \xB7 ${nome}`;
     if (en.tipo === "giorno_forte") return `Giorno forte \xB7 ${en.target_mattina}+${en.target_sera}`;
     return `Preferenza \xB7 ${nome} \u2192 ${TURNI[en.turno_preferito].label} (p${en.priorita})`;
   };
-  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tipo di marcatura"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 4 } }, [["ferie", "Ferie"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTipo(v), style: chip(tipo === v) }, l))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dipendente"), /* @__PURE__ */ React.createElement("select", { style: inp, value: empId, onChange: (e) => setEmpId(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 seleziona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome")))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dal"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: from, onChange: (e) => setFrom(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Al"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: to, onChange: (e) => setTo(e.target.value) }))), tipo === "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone mattina"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: tm, onChange: (e) => setTm(Number(e.target.value)) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone sera"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: ts, onChange: (e) => setTs(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tocca i giorni forti (anche staccati)"), /* @__PURE__ */ React.createElement(MiniCalendario, { selected: giorniForti, onToggle: toggleGiornoForte, mesiVisibili: 2 }), giorniForti.size > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#f97316", fontWeight: 600, marginBottom: 4 } }, giorniForti.size, " ", giorniForti.size === 1 ? "giorno selezionato" : "giorni selezionati")), tipo === "preferenza_turno" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turno preferito"), /* @__PURE__ */ React.createElement("select", { style: inp, value: turnoPref, onChange: (e) => setTurnoPref(e.target.value) }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Priorit\xE0 (6\u201310)"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 6, max: 10, style: inp, value: prio, onChange: (e) => setPrio(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("button", { onClick: add, style: btnPrimary }, "+ Aggiungi al calendario")), entries.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: empty }, "Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.") : entries.map((en, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, color: "#0f172a" } }, label(en)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b" } }, en.start === en.end ? en.start : `${en.start} \u2192 ${en.end}`))), /* @__PURE__ */ React.createElement("button", { onClick: () => setEntries(entries.filter((_, j) => j !== i)), style: { background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" } }, "\xD7"))));
+  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "malattia" ? "#ef4444" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tipo di marcatura"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 4 } }, [["ferie", "Ferie"], ["malattia", "Malattia"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTipo(v), style: chip(tipo === v) }, l))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dipendente"), /* @__PURE__ */ React.createElement("select", { style: inp, value: empId, onChange: (e) => setEmpId(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 seleziona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome")))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dal"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: from, onChange: (e) => setFrom(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Al"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: to, onChange: (e) => setTo(e.target.value) }))), tipo === "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone mattina"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: tm, onChange: (e) => setTm(Number(e.target.value)) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone sera"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: ts, onChange: (e) => setTs(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tocca i giorni forti (anche staccati)"), /* @__PURE__ */ React.createElement(MiniCalendario, { selected: giorniForti, onToggle: toggleGiornoForte, mesiVisibili: 2 }), giorniForti.size > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#f97316", fontWeight: 600, marginBottom: 4 } }, giorniForti.size, " ", giorniForti.size === 1 ? "giorno selezionato" : "giorni selezionati")), tipo === "preferenza_turno" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turno preferito"), /* @__PURE__ */ React.createElement("select", { style: inp, value: turnoPref, onChange: (e) => setTurnoPref(e.target.value) }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Priorit\xE0 (6\u201310)"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 6, max: 10, style: inp, value: prio, onChange: (e) => setPrio(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("button", { onClick: add, style: btnPrimary }, "+ Aggiungi al calendario")), entries.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: empty }, "Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.") : entries.map((en, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, color: "#0f172a" } }, label(en)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b" } }, en.start === en.end ? en.start : `${en.start} \u2192 ${en.end}`))), /* @__PURE__ */ React.createElement("button", { onClick: () => setEntries(entries.filter((_, j) => j !== i)), style: { background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" } }, "\xD7"))));
 }
 function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, motore, conflitti, violazioni, draft }) {
   var _a;
@@ -1004,7 +1006,7 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
     var _a;
     return ((_a = orario.find((a) => a.employee_id === eid && a.giorno === iso(d))) == null ? void 0 : _a.turno) || "-";
   };
-  const isFerie = (eid, d) => entries.some((en) => en.tipo === "ferie" && en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
+  const isFerie = (eid, d) => entries.some((en) => (en.tipo === "ferie" || en.tipo === "malattia") && en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
   const gLabel = (d) => `${GIORNI[(d.getDay() + 6) % 7]} ${fmtGiorno(d)}`;
   const lavoro = (t) => ASSEGNABILI.includes(t);
   let daCompilare = 0;
@@ -1028,7 +1030,7 @@ function analizzaBozza(orario, employees, start, entries, prevInfo) {
     for (const d of giorni) {
       const t = get(e.id, d);
       if (isFerie(e.id, d) && lavoro(t))
-        rossi.push(`${nome} \xE8 in ferie ${gLabel(d)} ma ha un turno assegnato.`);
+        rossi.push(`${nome} \xE8 in ferie o malattia ${gLabel(d)} ma ha un turno assegnato.`);
     }
     const seq = [
       { d: null, t: (prevInfo.vigilia || {})[e.id] || "libero" },
@@ -1325,6 +1327,7 @@ function TabStatistiche({ persistenza }) {
   const [emps, setEmps] = useState([]);
   const [anno, setAnno] = useState((/* @__PURE__ */ new Date()).getFullYear());
   const [ferie, setFerie] = useState({});
+  const [malattia, setMalattia] = useState({});
   const [anniFerie, setAnniFerie] = useState([]);
   const [caricamento, setCaricamento] = useState(false);
   useEffect(() => {
@@ -1367,6 +1370,12 @@ function TabStatistiche({ persistenza }) {
         setAnniFerie(d.anni || []);
       } catch (e) {
       }
+      try {
+        const m = await caricaStatisticheMalattia(anno);
+        if (annullato) return;
+        setMalattia(m.malattia || {});
+      } catch (e) {
+      }
     })();
     return () => {
       annullato = true;
@@ -1381,13 +1390,14 @@ function TabStatistiche({ persistenza }) {
     const s = stats && stats[e.id] || { mattine: 0, sere: 0, intermedi: 0, weekend: 0, liberi: 0 };
     return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 13.5, fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 } }, e.nome), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.mattine), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.sere), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.intermedi), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.weekend), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.liberi));
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo turni"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, [["1m", "1 mese"], ["3m", "3 mesi"], ["6m", "6 mesi"], ["12m", "12 mesi"], ["anno", "Inizio anno"], ["custom", "Intervallo"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setPeriodo(v), style: chip(periodo === v) }, l))), periodo === "custom" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "Da"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataInizio, onChange: (e) => setDataInizio(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "A"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataFine, onChange: (e) => setDataFine(e.target.value) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0", marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#94a3b8", padding: "10px 0" } }, "Caricamento\u2026"), attivi.length === 0 && !caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "16px 0" } }, "Nessun dato per il periodo selezionato."), attivi.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e })), archiviati.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" } }, "Archivio"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8", marginBottom: 8 } }, "Dipendenti non pi\xF9 attivi \u2014 dati conservati."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), archiviati.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" } }, "Ferie per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno - 1), style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: "#0f172a", minWidth: 56, textAlign: "center" } }, anno), /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno + 1), style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#0f172a" } }, ferie[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "#94a3b8" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "10px 0" } }, "Nessun dato.")));
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo turni"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, [["1m", "1 mese"], ["3m", "3 mesi"], ["6m", "6 mesi"], ["12m", "12 mesi"], ["anno", "Inizio anno"], ["custom", "Intervallo"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setPeriodo(v), style: chip(periodo === v) }, l))), periodo === "custom" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "Da"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataInizio, onChange: (e) => setDataInizio(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "A"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataFine, onChange: (e) => setDataFine(e.target.value) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0", marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#94a3b8", padding: "10px 0" } }, "Caricamento\u2026"), attivi.length === 0 && !caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "16px 0" } }, "Nessun dato per il periodo selezionato."), attivi.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e })), archiviati.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" } }, "Archivio"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8", marginBottom: 8 } }, "Dipendenti non pi\xF9 attivi \u2014 dati conservati."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), archiviati.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" } }, "Ferie per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno - 1), style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: "#0f172a", minWidth: 56, textAlign: "center" } }, anno), /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno + 1), style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#0f172a" } }, ferie[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "#94a3b8" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "10px 0" } }, "Nessun dato.")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" } }, "Malattia per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8", marginBottom: 8 } }, "Conta tutti i giorni di malattia dell'anno ", anno, "."), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#0f172a" } }, malattia[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "#94a3b8" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "10px 0" } }, "Nessun dato.")));
 }
 const statCell = { flex: 1, textAlign: "center", fontSize: 13.5, color: "#0f172a", fontVariantNumeric: "tabular-nums" };
 const statHead = { flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase" };
 const BACKEND = "https://orari-buono.onrender.com";
 const LS_EMP = "turni_employees";
 const LS_CAL = "turni_calendar";
+const LS_RINFORZO = "turni_rinforzo";
 function leggiLocale(chiave) {
   try {
     const raw = localStorage.getItem(chiave);
@@ -1452,6 +1462,10 @@ async function caricaStatisticheFerie(anno) {
   const d = await api(`/statistiche-ferie?anno=${anno}`);
   return d;
 }
+async function caricaStatisticheMalattia(anno) {
+  const d = await api(`/statistiche-malattia?anno=${anno}`);
+  return d;
+}
 function normEmp(e) {
   const tf = {};
   for (const [k, v] of Object.entries(e.turni_fissi || {})) tf[Number(k)] = v;
@@ -1465,6 +1479,7 @@ function App() {
   const [start, setStart] = useState(lunediProssimo());
   const [assenze, setAssenze] = useState([]);
   const [presenze, setPresenze] = useState([]);
+  const [giorniRinforzo, setGiorniRinforzo] = useState(() => leggiLocale(LS_RINFORZO) || [2, 3, 4]);
   const [bozzaManuale, setBozzaManuale] = useState(false);
   const [salvataggioBozza, setSalvataggioBozza] = useState(false);
   const [prevInfo, setPrevInfo] = useState({ vigilia: {}, tail: {} });
@@ -1525,6 +1540,9 @@ function App() {
     return () => clearTimeout(t);
   }, [employees, persistenza, pronto]);
   useEffect(() => {
+    scriviLocale(LS_RINFORZO, giorniRinforzo);
+  }, [giorniRinforzo]);
+  useEffect(() => {
     scriviLocale(LS_CAL, entries);
     if (!persistenza || !pronto) return;
     const t = setTimeout(() => {
@@ -1558,7 +1576,7 @@ function App() {
       }
     }
     const entriesConAssenze = [...entries, ...entryAssenze];
-    const res = await generaOrario(employees, entriesConAssenze, start, numWeeks, storico, backendUrl);
+    const res = await generaOrario(employees, entriesConAssenze, start, numWeeks, storico, backendUrl, giorniRinforzo);
     setOrario(res.assignments);
     setMessaggi(res.messaggi || []);
     setViolazioni(res.violazioni || []);
@@ -1597,7 +1615,7 @@ function App() {
   };
   const creaManuale = async () => {
     const giorni = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-    const inFerie = (eid, d) => entries.some((en) => en.tipo === "ferie" && en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
+    const inFerie = (eid, d) => entries.some((en) => (en.tipo === "ferie" || en.tipo === "malattia") && en.employee_id === eid && en.start <= iso(d) && iso(d) <= en.end);
     const bozza = [];
     for (const e of employees)
       for (const d of giorni)
@@ -1772,7 +1790,17 @@ function App() {
       start,
       numWeeks
     }
-  ))), /* @__PURE__ */ React.createElement(TabCalendario, { employees, entries, setEntries, start, numWeeks })), tab === "orario" && /* @__PURE__ */ React.createElement(React.Fragment, null, orario && navInfo && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  ), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Giorni con 3 persone (fascia mattina)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b", marginBottom: 6 } }, "In questi giorni l'algoritmo affianca un turno intermedio ai 2 dell'apertura, cos\xEC da coprire anche il passaggio alla sera. Preimpostati: mer, gio e ven."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: i,
+      onClick: () => setGiorniRinforzo(
+        giorniRinforzo.includes(i) ? giorniRinforzo.filter((x) => x !== i) : [...giorniRinforzo, i].sort()
+      ),
+      style: chip(giorniRinforzo.includes(i))
+    },
+    g
+  ))))), /* @__PURE__ */ React.createElement(TabCalendario, { employees, entries, setEntries, start, numWeeks })), tab === "orario" && /* @__PURE__ */ React.createElement(React.Fragment, null, orario && navInfo && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
