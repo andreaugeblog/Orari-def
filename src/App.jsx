@@ -24,15 +24,31 @@ const TURNI = {
   "-": { label: "-", orario: "", start: null, end: null, fascia: "X" },
 };
 
+// Colori dei turni nell'INTERFACCIA: seguono il tema chiaro/scuro tramite
+// variabili CSS (definite in template.html).
 const COLORI_TURNO = {
-  mattina: { bg: "#fef3e2", fg: "#b45309", bar: "#f59e0b" },
-  "10-18": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  "11-19": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  "12-20": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  sera: { bg: "#ede9fe", fg: "#6d28d9", bar: "#8b5cf6" },
-  libero: { bg: "#f1f5f9", fg: "#94a3b8", bar: "#cbd5e1" },
+  mattina: { bg: "var(--t-m-bg)", fg: "var(--t-m-fg)", bar: "var(--t-m-bar)", line: "var(--t-m-line)" },
+  "10-18": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  "11-19": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  "12-20": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  sera: { bg: "var(--t-s-bg)", fg: "var(--t-s-fg)", bar: "var(--t-s-bar)", line: "var(--t-s-line)" },
+  libero: { bg: "var(--t-l-bg)", fg: "var(--t-l-fg)", bar: "var(--t-l-bar)", line: "var(--t-l-line)" },
   // grigio più scuro del libero: cella da compilare in "Crea orario"
-  "-": { bg: "#e2e8f0", fg: "#64748b", bar: "#94a3b8" },
+  "-": { bg: "var(--t-x-bg)", fg: "var(--t-x-fg)", bar: "var(--t-x-bar)", line: "var(--t-x-line)" },
+};
+
+// Colori FISSI CHIARI, usati dalle due superfici che si mostrano ad altri e
+// che restano sempre chiare a prescindere dal tema: l'immagine esportata
+// (si stampa e si manda su WhatsApp) e la vista a tutto schermo orizzontale
+// (si mostra ai dipendenti). Il canvas non può leggere le variabili CSS.
+const COLORI_STAMPA = {
+  mattina: { bg: "#fef3e2", fg: "#b45309", bar: "#f59e0b", line: "#f59e0b66" },
+  "10-18": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  "11-19": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  "12-20": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  sera: { bg: "#ede9fe", fg: "#6d28d9", bar: "#8b5cf6", line: "#8b5cf666" },
+  libero: { bg: "#f1f5f9", fg: "#94a3b8", bar: "#cbd5e1", line: "#cbd5e199" },
+  "-": { bg: "#e2e8f0", fg: "#64748b", bar: "#94a3b8", line: "#94a3b899" },
 };
 
 const INTERMEDI = ["10-18", "11-19", "12-20"];
@@ -351,18 +367,18 @@ function Toggle({ checked, onChange, label }) {
       <span
         style={{
           width: 38, height: 22, borderRadius: 11, flexShrink: 0,
-          background: checked ? "#1e293b" : "#cbd5e1",
+          background: checked ? "var(--accent-2)" : "var(--line-2)",
           position: "relative", transition: "background .15s",
         }}
       >
         <span
           style={{
             position: "absolute", top: 2, left: checked ? 18 : 2, width: 18, height: 18,
-            borderRadius: "50%", background: "#fff", transition: "left .15s",
+            borderRadius: "50%", background: "var(--surface)", transition: "left .15s",
           }}
         />
       </span>
-      <span style={{ fontSize: 14, color: "#1e293b" }}>{label}</span>
+      <span style={{ fontSize: 14, color: "var(--ink)" }}>{label}</span>
     </button>
   );
 }
@@ -384,27 +400,27 @@ function SchedaDipendente({ emp, onChange, onDelete }) {
   };
 
   return (
-    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", marginBottom: 12, overflow: "hidden" }}>
+    <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", marginBottom: 12, overflow: "hidden" }}>
       <div
         onClick={() => setOpen(!open)}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ width: 34, height: 34, borderRadius: "50%", background: "#1e293b", color: "#fff", display: "grid", placeItems: "center", fontWeight: 600, fontSize: 14 }}>
+          <span style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--accent-2)", color: "var(--on-accent)", display: "grid", placeItems: "center", fontWeight: 600, fontSize: 14 }}>
             {emp.nome ? emp.nome[0].toUpperCase() : "?"}
           </span>
           <div>
-            <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 15 }}>{emp.nome || "Senza nome"}</div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>
+            <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 15 }}>{emp.nome || "Senza nome"}</div>
+            <div style={{ fontSize: 12, color: "var(--ink-2)" }}>
               {[emp.sa_aprire && "apre", emp.sa_chiudere && "chiude"].filter(Boolean).join(" · ") || "nessuna competenza"}
             </div>
           </div>
         </div>
-        <span style={{ color: "#94a3b8", fontSize: 18, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}>›</span>
+        <span style={{ color: "var(--ink-3)", fontSize: 18, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}>›</span>
       </div>
 
       {open && (
-        <div style={{ padding: "4px 16px 16px", borderTop: "1px solid #f1f5f9" }}>
+        <div style={{ padding: "4px 16px 16px", borderTop: "1px solid var(--line-soft)" }}>
           <label style={lbl}>Nome</label>
           <input style={inp} value={emp.nome} onChange={(e) => set({ nome: e.target.value })} placeholder="Nome dipendente" />
 
@@ -423,7 +439,7 @@ function SchedaDipendente({ emp, onChange, onDelete }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {GIORNI.map((g, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 40, fontSize: 13, color: "#475569" }}>{g}</span>
+                <span style={{ width: 40, fontSize: 13, color: "var(--ink-2)" }}>{g}</span>
                 <select style={{ ...inp, marginBottom: 0, flex: 1 }} value={emp.turni_fissi[i] || ""} onChange={(e) => setTurnoFisso(i, e.target.value)}>
                   <option value="">— nessuno —</option>
                   {ASSEGNABILI.map((t) => <option key={t} value={t}>{TURNI[t].label} ({TURNI[t].orario})</option>)}
@@ -439,7 +455,7 @@ function SchedaDipendente({ emp, onChange, onDelete }) {
 
           <Toggle checked={emp.libero_sacrificabile} onChange={(v) => set({ libero_sacrificabile: v })} label="Giorno libero sacrificabile (casi estremi)" />
 
-          <button onClick={onDelete} style={{ marginTop: 14, width: "100%", padding: 10, borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+          <button onClick={onDelete} style={{ marginTop: 14, width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--danger-line)", background: "var(--danger-bg)", color: "var(--danger)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
             Elimina dipendente
           </button>
         </div>
@@ -503,7 +519,7 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
   const totAssenze = assenze.reduce((s, a) => s + a.giorni.size, 0);
 
   return (
-    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f1f5f9" }}>
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
       <button onClick={() => setAperto(!aperto)} style={{
         width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "none", border: "none", cursor: "pointer", padding: 0,
@@ -511,12 +527,12 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
         <label style={{ ...lbl, marginTop: 0, marginBottom: 0, cursor: "pointer" }}>
           Assenze di questa settimana {totAssenze > 0 ? `(${totAssenze})` : "(facoltativo)"}
         </label>
-        <span style={{ color: "#94a3b8", fontSize: 14 }}>{aperto ? "▴" : "▾"}</span>
+        <span style={{ color: "var(--ink-3)", fontSize: 14 }}>{aperto ? "▴" : "▾"}</span>
       </button>
 
       {aperto && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", marginBottom: 8 }}>
             Permessi/visite: la persona scelta non lavorerà nei giorni selezionati. Vale solo per questa generazione.
           </div>
           <select style={inp} value={empSel} onChange={(e) => setEmpSel(e.target.value)}>
@@ -533,11 +549,11 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
                   <button key={i} onClick={() => toggleGiorno(empSel, isoD)}
                     style={{
                       padding: "8px 2px", borderRadius: 8, cursor: "pointer", textAlign: "center",
-                      border: sel ? "1px solid #dc2626" : "1px solid #e2e8f0",
-                      background: sel ? "#fef2f2" : "#fff",
+                      border: sel ? "1px solid var(--danger)" : "1px solid var(--line)",
+                      background: sel ? "var(--danger-bg)" : "var(--surface)",
                     }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: sel ? "#dc2626" : "#94a3b8" }}>{GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: sel ? "#dc2626" : "#0f172a" }}>{d.getDate()}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: sel ? "var(--danger)" : "var(--ink-3)" }}>{GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: sel ? "var(--danger)" : "var(--ink)" }}>{d.getDate()}</div>
                   </button>
                 );
               })}
@@ -551,7 +567,7 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
                 const nome = employees.find((e) => e.id === a.employee_id)?.nome || "?";
                 const giorniOrdinati = [...a.giorni].sort();
                 return (
-                  <div key={a.employee_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5, color: "#0f172a", padding: "4px 0" }}>
+                  <div key={a.employee_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5, color: "var(--ink)", padding: "4px 0" }}>
                     <span><b>{nome}</b> assente: {giorniOrdinati.map((g) => { const [y,m,d]=g.split("-"); return `${+d}/${+m}`; }).join(", ")}</span>
                   </div>
                 );
@@ -590,7 +606,7 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
   const tot = presenze.reduce((s, p) => s + Object.keys(p.giorni).length, 0);
 
   return (
-    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f1f5f9" }}>
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
       <button onClick={() => setAperto(!aperto)} style={{
         width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
         background: "none", border: "none", cursor: "pointer", padding: 0,
@@ -598,12 +614,12 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
         <label style={{ ...lbl, marginTop: 0, marginBottom: 0, cursor: "pointer" }}>
           Presenze obbligate {tot > 0 ? `(${tot})` : "(facoltativo)"}
         </label>
-        <span style={{ color: "#94a3b8", fontSize: 14 }}>{aperto ? "▴" : "▾"}</span>
+        <span style={{ color: "var(--ink-3)", fontSize: 14 }}>{aperto ? "▴" : "▾"}</span>
       </button>
 
       {aperto && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", marginBottom: 8 }}>
             La persona scelta farà obbligatoriamente il turno indicato nei giorni selezionati.
             Vale solo per questa generazione.
           </div>
@@ -630,12 +646,12 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
                     <button key={i} onClick={() => toggleGiorno(empSel, isoD)}
                       style={{
                         padding: "6px 2px", borderRadius: 8, cursor: "pointer", textAlign: "center",
-                        border: sel ? "1px solid #16a34a" : "1px solid #e2e8f0",
-                        background: sel ? "#f0fdf4" : "#fff",
+                        border: sel ? "1px solid var(--ok)" : "1px solid var(--line)",
+                        background: sel ? "var(--ok-bg)" : "var(--surface)",
                       }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: sel ? "#16a34a" : "#94a3b8" }}>{GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: sel ? "#16a34a" : "#0f172a" }}>{d.getDate()}</div>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: sel ? "#16a34a" : "transparent", minHeight: 11 }}>{sel ? TURNI[turnoGiorno].orario : "·"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: sel ? "var(--ok)" : "var(--ink-3)" }}>{GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: sel ? "var(--ok)" : "var(--ink)" }}>{d.getDate()}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: sel ? "var(--ok)" : "transparent", minHeight: 11 }}>{sel ? TURNI[turnoGiorno].orario : "·"}</div>
                     </button>
                   );
                 })}
@@ -650,7 +666,7 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
                 const nome = employees.find((e) => e.id === p.employee_id)?.nome || "?";
                 const giorniOrdinati = Object.keys(p.giorni).sort();
                 return (
-                  <div key={p.employee_id} style={{ fontSize: 12.5, color: "#0f172a", padding: "4px 0" }}>
+                  <div key={p.employee_id} style={{ fontSize: 12.5, color: "var(--ink)", padding: "4px 0" }}>
                     <b>{nome}</b> deve fare: {giorniOrdinati.map((g) => {
                       const [y, m, d] = g.split("-");
                       return `${+d}/${+m} ${TURNI[p.giorni[g]].orario}`;
@@ -685,10 +701,10 @@ function MiniCalendario({ selected, onToggle, mesiVisibili = 2, minDate = null }
         for (let g = 1; g <= giorniNelMese; g++) celle.push(g);
         return (
           <div key={mi} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6, textAlign: "center" }}>{nomeMese(primo)}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 6, textAlign: "center" }}>{nomeMese(primo)}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
               {["L","M","M","G","V","S","D"].map((g, i) => (
-                <div key={"h"+i} style={{ textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#94a3b8", padding: "2px 0" }}>{g}</div>
+                <div key={"h"+i} style={{ textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", padding: "2px 0" }}>{g}</div>
               ))}
               {celle.map((g, i) => {
                 if (g == null) return <div key={"e"+i} />;
@@ -702,9 +718,9 @@ function MiniCalendario({ selected, onToggle, mesiVisibili = 2, minDate = null }
                     style={{
                       aspectRatio: "1", borderRadius: 8, cursor: disabilitato ? "default" : "pointer",
                       fontSize: 13, fontWeight: sel ? 700 : 500,
-                      background: sel ? "#f97316" : disabilitato ? "#f8fafc" : we ? "#f1f5f9" : "#fff",
-                      color: sel ? "#fff" : disabilitato ? "#cbd5e1" : "#0f172a",
-                      border: sel ? "1px solid #f97316" : "1px solid #e2e8f0",
+                      background: sel ? "var(--forte)" : disabilitato ? "var(--surface-2)" : we ? "var(--bg)" : "var(--surface)",
+                      color: sel ? "var(--on-accent)" : disabilitato ? "var(--ink-4)" : "var(--ink)",
+                      border: sel ? "1px solid var(--forte)" : "1px solid var(--line)",
                     }}>{g}</button>
                 );
               })}
@@ -759,11 +775,11 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
     if (en.tipo === "giorno_forte") return `Giorno forte · ${en.target_mattina}+${en.target_sera}`;
     return `Preferenza · ${nome} → ${TURNI[en.turno_preferito].label} (p${en.priorita})`;
   };
-  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "malattia" ? "#ef4444" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
+  const colorEntry = (t) => t === "ferie" ? "var(--ferie)" : t === "malattia" ? "var(--malattia)" : t === "giorno_forte" ? "var(--forte)" : "var(--pref)";
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 }}>
+      <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", padding: 16, marginBottom: 16 }}>
         <label style={lbl}>Tipo di marcatura</label>
         <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
           {[["ferie", "Ferie"], ["malattia", "Malattia"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => (
@@ -809,7 +825,7 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
             <label style={lbl}>Tocca i giorni forti (anche staccati)</label>
             <MiniCalendario selected={giorniForti} onToggle={toggleGiornoForte} mesiVisibili={2} />
             {giorniForti.size > 0 && (
-              <div style={{ fontSize: 12.5, color: "#f97316", fontWeight: 600, marginBottom: 4 }}>
+              <div style={{ fontSize: 12.5, color: "var(--forte)", fontWeight: 600, marginBottom: 4 }}>
                 {giorniForti.size} {giorniForti.size === 1 ? "giorno selezionato" : "giorni selezionati"}
               </div>
             )}
@@ -838,17 +854,17 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
         <div style={empty}>Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.</div>
       ) : (
         entries.map((en, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) }} />
               <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>{label(en)}</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{label(en)}</div>
+                <div style={{ fontSize: 12, color: "var(--ink-2)" }}>
                   {en.start === en.end ? en.start : `${en.start} → ${en.end}`}
                 </div>
               </div>
             </div>
-            <button onClick={() => setEntries(entries.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>×</button>
+            <button onClick={() => setEntries(entries.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--ink-3)", fontSize: 20, cursor: "pointer" }}>×</button>
           </div>
         ))
       )}
@@ -872,13 +888,13 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
   return (
     <div style={{ paddingBottom: 80 }}>
       {messaggi && messaggi.length > 0 && (
-        <div style={{ margin: 16, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 13 }}>
+        <div style={{ margin: 16, padding: 12, borderRadius: 12, background: "var(--sync-bg)", border: "1px solid var(--sync-line)", color: "var(--sync-ink)", fontSize: 13 }}>
           {messaggi.map((m, i) => <div key={i}>{m}</div>)}
         </div>
       )}
 
       {violazioni && violazioni.length > 0 && (
-        <div style={{ margin: "0 16px 8px", padding: 12, borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: 12.5 }}>
+        <div style={{ margin: "0 16px 8px", padding: 12, borderRadius: 12, background: "var(--info-bg)", border: "1px solid var(--info-line)", color: "var(--info-ink)", fontSize: 12.5 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Note sull'orario</div>
           {violazioni.map((v, i) => <div key={i} style={{ marginBottom: 2 }}>· {v}</div>)}
         </div>
@@ -887,7 +903,7 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
       {numWeeks > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 0" }}>
           <button onClick={() => setSettimana(Math.max(0, settimana - 1))} disabled={settimana === 0} style={navBtn}>‹</button>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
             Settimana {settimana + 1} di {numWeeks}
           </span>
           <button onClick={() => setSettimana(Math.min(numWeeks - 1, settimana + 1))} disabled={settimana === numWeeks - 1} style={navBtn}>›</button>
@@ -898,13 +914,13 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
         <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 620 }}>
           <thead>
             <tr>
-              <th style={{ ...th, textAlign: "left", position: "sticky", left: 0, background: "#f8fafc", zIndex: 2 }}>Dipendente</th>
+              <th style={{ ...th, textAlign: "left", position: "sticky", left: 0, background: "var(--surface-2)", zIndex: 2 }}>Dipendente</th>
               {giorni.map((d, i) => {
                 const we = i >= 5;
                 return (
-                  <th key={i} style={{ ...th, background: we ? "#f1f5f9" : "#f8fafc" }}>
-                    <div style={{ fontWeight: 700, color: we ? "#64748b" : "#0f172a" }}>{GIORNI[i]}</div>
-                    <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 400 }}>{fmtGiorno(d)}</div>
+                  <th key={i} style={{ ...th, background: we ? "var(--bg)" : "var(--surface-2)" }}>
+                    <div style={{ fontWeight: 700, color: we ? "var(--ink-2)" : "var(--ink)" }}>{GIORNI[i]}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 400 }}>{fmtGiorno(d)}</div>
                   </th>
                 );
               })}
@@ -913,7 +929,7 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
           <tbody>
             {employees.map((e) => (
               <tr key={e.id}>
-                <td style={{ ...tdName, position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{e.nome || "—"}</td>
+                <td style={{ ...tdName, position: "sticky", left: 0, background: "var(--surface)", zIndex: 1 }}>{e.nome || "—"}</td>
                 {giorni.map((d, i) => {
                   const t = get(e.id, d);
                   const c = COLORI_TURNO[t];
@@ -924,7 +940,7 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
                       <button
                         onClick={() => setCella({ empId: e.id, isoDay: iso(d) })}
                         style={{
-                          width: "100%", border: conflitto ? "2px solid #dc2626" : "1px solid " + c.bar + "40",
+                          width: "100%", border: conflitto ? "2px solid var(--danger)" : "1px solid " + c.bar + "40",
                           background: c.bg, borderRadius: 8, padding: "6px 4px", cursor: "pointer",
                           display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
                         }}
@@ -943,11 +959,11 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
 
       <div style={{ padding: "12px 16px 0" }}>
         <button onClick={() => esportaOrario(orario, employees, weekStart)} style={{
-          ...btnPrimary, background: "#334155", marginBottom: 0, padding: 11, fontSize: 14,
+          ...btnPrimary, background: "var(--accent-3)", marginBottom: 0, padding: 11, fontSize: 14,
         }}>⤓ Esporta orario</button>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: 16, fontSize: 12, color: "#64748b" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: 16, fontSize: 12, color: "var(--ink-2)" }}>
         {Object.entries({ mattina: "Mattina", "10-18": "Intermedio", sera: "Sera", libero: "Libero" }).map(([k, l]) => (
           <span key={k} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: COLORI_TURNO[k].bar }} /> {l}
@@ -959,10 +975,10 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
       {cella && (
         <div onClick={() => setCella(null)} style={modalBg}>
           <div onClick={(e) => e.stopPropagation()} style={modal}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: "#0f172a" }}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--ink)" }}>
               {employees.find((e) => e.id === cella.empId)?.nome}
             </div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 14 }}>
               {GIORNI_FULL[(new Date(cella.isoDay).getDay() + 6) % 7]} {fmtGiorno(new Date(cella.isoDay))}
             </div>
             {[...ASSEGNABILI, "libero", ...(draft ? ["-"] : [])].map((t) => (
@@ -1198,7 +1214,7 @@ function esportaOrario(orario, employees, weekStart) {
     // celle
     giorni.forEach((d, i) => {
       const t = get(e.id, d);
-      const c = COLORI_TURNO[t] || COLORI_TURNO["libero"];
+      const c = COLORI_STAMPA[t] || COLORI_STAMPA["libero"];
       const x = M + NOME_W + i * COL_W;
       rr(x + 5, y + 7, COL_W - 10, RIGA_H - 14, 10);
       ctx.fillStyle = c.bg; ctx.fill();
@@ -1278,21 +1294,21 @@ function TabStorico({ storico, persistenza, onApri }) {
     <div style={{ padding: 16, paddingBottom: 40 }}>
       {Object.entries(gruppi).map(([mese, lista]) => (
         <div key={mese} style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{mese}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{mese}</div>
           {lista.map((s) => (
             <button key={s.id} onClick={() => onApri(s)} style={{
               width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "13px 14px", marginBottom: 8, cursor: "pointer",
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "13px 14px", marginBottom: 8, cursor: "pointer",
             }}>
               <div>
-                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#0f172a" }}>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--ink)" }}>
                   Settimana dal {rangeSettimana(s.data_inizio)}
                 </div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>
+                <div style={{ fontSize: 12, color: "var(--ink-2)" }}>
                   {s.stato === "OPTIMAL" ? "completo" : s.stato.toLowerCase()}
                 </div>
               </div>
-              <span style={{ color: "#94a3b8", fontSize: 18 }}>›</span>
+              <span style={{ color: "var(--ink-3)", fontSize: 18 }}>›</span>
             </button>
           ))}
         </div>
@@ -1345,13 +1361,13 @@ function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onMod
               </div>
               {giorni.map((d, i) => {
                 const t = get(e.id, d);
-                const c = COLORI_TURNO[t];
+                const c = COLORI_STAMPA[t];
                 const conflitto = conflitti?.has(e.id + iso(d));
                 return (
                   <button key={i} onClick={() => setCella({ empId: e.id, isoDay: iso(d) })}
                     style={{
                       flex: 1, margin: 3, borderRadius: 8,
-                      border: conflitto ? "2px solid #dc2626" : "1px solid " + c.bar + "40",
+                      border: conflitto ? "2px solid #dc2626" : "1px solid " + c.line,
                       background: c.bg, cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", padding: 0, minHeight: 0,
                     }}>
@@ -1379,9 +1395,9 @@ function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onMod
               <button key={t} onClick={() => { onModifica(cella.empId, cella.isoDay, t); setCella(null); }}
                 style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "11px 14px", marginBottom: 6, borderRadius: 10, cursor: "pointer",
-                  border: "1px solid " + COLORI_TURNO[t].bar + "55", background: COLORI_TURNO[t].bg }}>
-                <span style={{ fontWeight: 600, color: COLORI_TURNO[t].fg }}>{TURNI[t].label}</span>
-                <span style={{ fontSize: 13, color: COLORI_TURNO[t].fg, opacity: 0.7 }}>{TURNI[t].orario}</span>
+                  border: "1px solid " + COLORI_STAMPA[t].line, background: COLORI_STAMPA[t].bg }}>
+                <span style={{ fontWeight: 600, color: COLORI_STAMPA[t].fg }}>{TURNI[t].label}</span>
+                <span style={{ fontSize: 13, color: COLORI_STAMPA[t].fg, opacity: 0.7 }}>{TURNI[t].orario}</span>
               </button>
             ))}
           </div>
@@ -1473,8 +1489,8 @@ function TabStatistiche({ persistenza }) {
   const RigaStat = ({ e }) => {
     const s = (stats && stats[e.id]) || { mattine: 0, sere: 0, intermedi: 0, weekend: 0, liberi: 0 };
     return (
-      <div style={{ display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
-        <div style={{ flex: "0 0 30%", fontSize: 13.5, fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 }}>{e.nome}</div>
+      <div style={{ display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--line-soft)" }}>
+        <div style={{ flex: "0 0 30%", fontSize: 13.5, fontWeight: 600, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 }}>{e.nome}</div>
         <div style={statCell}>{s.mattine}</div>
         <div style={statCell}>{s.sere}</div>
         <div style={statCell}>{s.intermedi}</div>
@@ -1507,8 +1523,8 @@ function TabStatistiche({ persistenza }) {
       )}
 
       {/* intestazione colonne */}
-      <div style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0", marginTop: 4 }}>
-        <div style={{ flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Dipendente</div>
+      <div style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid var(--line)", marginTop: 4 }}>
+        <div style={{ flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Dipendente</div>
         <div style={statHead}>Matt</div>
         <div style={statHead}>Sere</div>
         <div style={statHead}>Inter</div>
@@ -1516,20 +1532,20 @@ function TabStatistiche({ persistenza }) {
         <div style={statHead}>Liberi</div>
       </div>
 
-      {caricamento && <div style={{ fontSize: 12.5, color: "#94a3b8", padding: "10px 0" }}>Caricamento…</div>}
+      {caricamento && <div style={{ fontSize: 12.5, color: "var(--ink-3)", padding: "10px 0" }}>Caricamento…</div>}
 
       {attivi.length === 0 && !caricamento && (
-        <div style={{ fontSize: 13, color: "#94a3b8", padding: "16px 0" }}>Nessun dato per il periodo selezionato.</div>
+        <div style={{ fontSize: 13, color: "var(--ink-3)", padding: "16px 0" }}>Nessun dato per il periodo selezionato.</div>
       )}
       {attivi.map((e) => <RigaStat key={e.id} e={e} />)}
 
       {/* archivio */}
       {archiviati.length > 0 && (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" }}>Archivio</div>
-          <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 8 }}>Dipendenti non più attivi — dati conservati.</div>
-          <div style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0" }}>
-            <div style={{ flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Dipendente</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" }}>Archivio</div>
+          <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 }}>Dipendenti non più attivi — dati conservati.</div>
+          <div style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid var(--line)" }}>
+            <div style={{ flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Dipendente</div>
             <div style={statHead}>Matt</div><div style={statHead}>Sere</div><div style={statHead}>Inter</div><div style={statHead}>WE</div><div style={statHead}>Liberi</div>
           </div>
           {archiviati.map((e) => <RigaStat key={e.id} e={e} />)}
@@ -1537,48 +1553,48 @@ function TabStatistiche({ persistenza }) {
       )}
 
       {/* ferie per anno */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" }}>Ferie per anno solare</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" }}>Ferie per anno solare</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <button onClick={() => setAnno(anno - 1)} style={navBtn}>‹</button>
-        <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", minWidth: 56, textAlign: "center" }}>{anno}</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", minWidth: 56, textAlign: "center" }}>{anno}</span>
         <button onClick={() => setAnno(anno + 1)} style={navBtn}>›</button>
       </div>
       <div>
         {emps.map((e) => (
-          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" }}>
+          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--line-soft)" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "var(--ink-3)" : "var(--ink)" }}>
               {e.nome}{e.archiviato ? " (archivio)" : ""}
             </span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-              {ferie[e.id] || 0} <span style={{ fontSize: 12, fontWeight: 400, color: "#94a3b8" }}>giorni</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+              {ferie[e.id] || 0} <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ink-3)" }}>giorni</span>
             </span>
           </div>
         ))}
-        {emps.length === 0 && <div style={{ fontSize: 13, color: "#94a3b8", padding: "10px 0" }}>Nessun dato.</div>}
+        {emps.length === 0 && <div style={{ fontSize: 13, color: "var(--ink-3)", padding: "10px 0" }}>Nessun dato.</div>}
       </div>
 
       {/* malattia per anno (stesso selettore anno delle ferie) */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" }}>Malattia per anno solare</div>
-      <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 8 }}>Conta tutti i giorni di malattia dell'anno {anno}.</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" }}>Malattia per anno solare</div>
+      <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 }}>Conta tutti i giorni di malattia dell'anno {anno}.</div>
       <div>
         {emps.map((e) => (
-          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" }}>
+          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--line-soft)" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "var(--ink-3)" : "var(--ink)" }}>
               {e.nome}{e.archiviato ? " (archivio)" : ""}
             </span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-              {malattia[e.id] || 0} <span style={{ fontSize: 12, fontWeight: 400, color: "#94a3b8" }}>giorni</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+              {malattia[e.id] || 0} <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ink-3)" }}>giorni</span>
             </span>
           </div>
         ))}
-        {emps.length === 0 && <div style={{ fontSize: 13, color: "#94a3b8", padding: "10px 0" }}>Nessun dato.</div>}
+        {emps.length === 0 && <div style={{ fontSize: 13, color: "var(--ink-3)", padding: "10px 0" }}>Nessun dato.</div>}
       </div>
     </div>
   );
 }
 
-const statCell = { flex: 1, textAlign: "center", fontSize: 13.5, color: "#0f172a", fontVariantNumeric: "tabular-nums" };
-const statHead = { flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase" };
+const statCell = { flex: 1, textAlign: "center", fontSize: 13.5, color: "var(--ink)", fontVariantNumeric: "tabular-nums" };
+const statHead = { flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" };
 
 // ==========================================================================
 //  SINCRONIZZAZIONE COL BACKEND (persistenza Supabase via Render)
@@ -1592,6 +1608,20 @@ const BACKEND = "https://orari-buono.onrender.com";
 const LS_EMP = "turni_employees";
 const LS_CAL = "turni_calendar";
 const LS_RINFORZO = "turni_rinforzo";   // giorni settimana con 3 in fascia mattina
+const LS_TEMA = "turni_tema";           // "scuro" (predefinito) | "chiaro"
+
+// Il tema e' gia' stato applicato dallo script in testa alla pagina (per non
+// far lampeggiare il bianco all'avvio): qui lo leggiamo e lo cambiamo.
+function temaCorrente() {
+  return document.documentElement.getAttribute("data-tema") === "chiaro" ? "chiaro" : "scuro";
+}
+function applicaTema(t) {
+  document.documentElement.setAttribute("data-tema", t);
+  try { localStorage.setItem(LS_TEMA, t); } catch { /* storage non disponibile */ }
+  // barra di stato del telefono in tinta con l'intestazione
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", t === "chiaro" ? "#0f172a" : "#0f1524");
+}
 
 function leggiLocale(chiave) {
   try {
@@ -1687,6 +1717,8 @@ export default function App() {
   // giorni della settimana (0=lun..6=dom) in cui servono 3 persone in fascia
   // mattina (2 apertura + 1 intermedio). Regola implicita: mer/gio/ven.
   const [giorniRinforzo, setGiorniRinforzo] = useState(() => leggiLocale(LS_RINFORZO) || [2, 3, 4]);
+  const [tema, setTema] = useState(temaCorrente);
+  const cambiaTema = (t) => { applicaTema(t); setTema(t); };
   const [bozzaManuale, setBozzaManuale] = useState(false); // true = "Crea orario" in corso
   const [salvataggioBozza, setSalvataggioBozza] = useState(false);
   const [prevInfo, setPrevInfo] = useState({ vigilia: {}, tail: {} }); // settimana precedente (per riposo/consecutivi)
@@ -1962,27 +1994,37 @@ export default function App() {
   }
 
   return (
-    <div style={{ fontFamily: "-apple-system, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
-      <header style={{ background: "#0f172a", color: "#fff", padding: "16px 18px 14px" }}>
-        <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.3 }}>Turni</div>
-        <div style={{ fontSize: 12.5, color: "#94a3b8" }}>
-          {employees.length} dipendenti · {numWeeks} {numWeeks === 1 ? "settimana" : "settimane"} · dal {fmtGiorno(start)}
-          {persistenza ? " · salvato ☁" : ""}
+    <div style={{ fontFamily: "-apple-system, system-ui, sans-serif", background: "var(--bg)", minHeight: "100vh", color: "var(--ink)" }}>
+      <header style={{ background: "var(--chrome)", color: "var(--chrome-ink)", padding: "16px 18px 14px",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.3 }}>Turni</div>
+          <div style={{ fontSize: 12.5, color: "var(--chrome-sub)" }}>
+            {employees.length} dipendenti · {numWeeks} {numWeeks === 1 ? "settimana" : "settimane"} · dal {fmtGiorno(start)}
+            {persistenza ? " · salvato ☁" : ""}
+          </div>
         </div>
+        <button onClick={() => cambiaTema(tema === "scuro" ? "chiaro" : "scuro")}
+          title={tema === "scuro" ? "Passa al tema chiaro" : "Passa al tema scuro"}
+          style={{
+            flexShrink: 0, width: 38, height: 38, borderRadius: 11, cursor: "pointer",
+            border: "1px solid var(--chrome-line)", background: "var(--chrome-btn)",
+            color: "var(--chrome-ink)", fontSize: 17, lineHeight: 1, padding: 0,
+          }}>{tema === "scuro" ? "☀" : "☾"}</button>
       </header>
 
       {syncMsg && (
-        <div style={{ background: "#fff7ed", color: "#9a3412", fontSize: 12.5, padding: "8px 16px", borderBottom: "1px solid #fed7aa" }}>
+        <div style={{ background: "var(--sync-bg)", color: "var(--sync-ink)", fontSize: 12.5, padding: "8px 16px", borderBottom: "1px solid var(--sync-line)" }}>
           {syncMsg}
         </div>
       )}
 
-      <nav style={{ display: "flex", background: "#fff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 }}>
+      <nav style={{ display: "flex", background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 10 }}>
         {[["dipendenti", "Dipendenti"], ["calendario", "Calendario"], ["orario", "Orario"], ["storico", "Storico"], ["statistiche", "Stat."]].map(([v, l]) => (
           <button key={v} onClick={() => setTab(v)} style={{
             flex: 1, padding: "13px 0", border: "none", background: "none", cursor: "pointer",
-            fontSize: 12.5, fontWeight: tab === v ? 700 : 500, color: tab === v ? "#0f172a" : "#94a3b8",
-            borderBottom: tab === v ? "2px solid #0f172a" : "2px solid transparent",
+            fontSize: 12.5, fontWeight: tab === v ? 700 : 500, color: tab === v ? "var(--ink)" : "var(--ink-3)",
+            borderBottom: tab === v ? "2px solid var(--accent)" : "2px solid transparent",
           }}>{l}</button>
         ))}
       </nav>
@@ -1992,7 +2034,7 @@ export default function App() {
         {tab === "calendario" && (
           <>
             <div style={{ padding: "16px 16px 0" }}>
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16 }}>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", padding: 16 }}>
                 <label style={lbl}>Lunedì di partenza</label>
                 <input type="date" style={inp} value={iso(start)} min={iso(lunediProssimo())}
                   onChange={(e) => {
@@ -2006,7 +2048,7 @@ export default function App() {
                     const minimo = lunediProssimo();
                     setStart(picked < minimo ? minimo : picked);
                   }} />
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: -2, marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: -2, marginBottom: 4 }}>
                   L'orario partirà dal lunedì {fmtGiorno(start)}. La settimana corrente non è generabile.
                 </div>
                 <label style={lbl}>Periodo da pianificare</label>
@@ -2023,7 +2065,7 @@ export default function App() {
                   start={start} numWeeks={numWeeks} />
 
                 <label style={lbl}>Giorni con 3 persone (fascia mattina)</label>
-                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: "var(--ink-2)", marginBottom: 6 }}>
                   In questi giorni l'algoritmo affianca un turno intermedio ai 2 dell'apertura,
                   così da coprire anche il passaggio alla sera. Preimpostati: mer, gio e ven.
                 </div>
@@ -2048,50 +2090,50 @@ export default function App() {
             {orario && navInfo && (
               <div style={{ padding: "12px 16px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 12px" }}>
+                  background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "10px 12px" }}>
                   <button onClick={() => navigaSettimana(-1)} disabled={!navInfo.haPrec} style={{
-                    width: 40, height: 40, borderRadius: 10, border: "1px solid #e2e8f0", cursor: navInfo.haPrec ? "pointer" : "default",
-                    background: navInfo.haPrec ? "#f8fafc" : "#f1f5f9", color: navInfo.haPrec ? "#0f172a" : "#cbd5e1", fontSize: 20, lineHeight: 1,
+                    width: 40, height: 40, borderRadius: 10, border: "1px solid var(--line)", cursor: navInfo.haPrec ? "pointer" : "default",
+                    background: navInfo.haPrec ? "var(--surface-2)" : "var(--bg)", color: navInfo.haPrec ? "var(--ink)" : "var(--ink-4)", fontSize: 20, lineHeight: 1,
                   }}>‹</button>
                   <div style={{ textAlign: "center", flex: 1 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 700, color: "#0f172a" }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ink)" }}>
                       {(() => {
                         const [y, m, d] = navInfo.corrente.split("-").map(Number);
                         const lun = new Date(y, m - 1, d); const dom = new Date(lun); dom.setDate(dom.getDate() + 6);
                         return `${lun.getDate()}/${lun.getMonth()+1} – ${dom.getDate()}/${dom.getMonth()+1}`;
                       })()}
                     </div>
-                    <div style={{ fontSize: 11.5, color: "#94a3b8" }}>orario salvato</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>orario salvato</div>
                   </div>
                   <button onClick={() => navigaSettimana(1)} disabled={!navInfo.haSucc} style={{
-                    width: 40, height: 40, borderRadius: 10, border: "1px solid #e2e8f0", cursor: navInfo.haSucc ? "pointer" : "default",
-                    background: navInfo.haSucc ? "#f8fafc" : "#f1f5f9", color: navInfo.haSucc ? "#0f172a" : "#cbd5e1", fontSize: 20, lineHeight: 1,
+                    width: 40, height: 40, borderRadius: 10, border: "1px solid var(--line)", cursor: navInfo.haSucc ? "pointer" : "default",
+                    background: navInfo.haSucc ? "var(--surface-2)" : "var(--bg)", color: navInfo.haSucc ? "var(--ink)" : "var(--ink-4)", fontSize: 20, lineHeight: 1,
                   }}>›</button>
                 </div>
               </div>
             )}
             {orario && bozzaManuale && avvisiBozza && (
               <div style={{ padding: "12px 16px 0" }}>
-                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                     Controllo orario
                   </div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: avvisiBozza.rossi.length || avvisiBozza.gialli.length || avvisiBozza.daCompilare ? 8 : 0 }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: avvisiBozza.rossi.length || avvisiBozza.gialli.length || avvisiBozza.daCompilare ? 8 : 0 }}>
                     Tocca una cella per assegnare il turno.
                   </div>
                   {avvisiBozza.daCompilare > 0 && (
-                    <div style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>
+                    <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 6 }}>
                       ✎ {avvisiBozza.daCompilare} {avvisiBozza.daCompilare === 1 ? "cella da compilare" : "celle da compilare"}
                     </div>
                   )}
                   {avvisiBozza.rossi.map((m, i) => (
-                    <div key={"r" + i} style={{ fontSize: 12.5, color: "#dc2626", marginBottom: 4 }}>● {m}</div>
+                    <div key={"r" + i} style={{ fontSize: 12.5, color: "var(--danger)", marginBottom: 4 }}>● {m}</div>
                   ))}
                   {avvisiBozza.gialli.map((m, i) => (
-                    <div key={"g" + i} style={{ fontSize: 12.5, color: "#b45309", marginBottom: 4 }}>● {m}</div>
+                    <div key={"g" + i} style={{ fontSize: 12.5, color: "var(--warn-ink)", marginBottom: 4 }}>● {m}</div>
                   ))}
                   {avvisiBozza.rossi.length === 0 && avvisiBozza.gialli.length === 0 && avvisiBozza.daCompilare === 0 && (
-                    <div style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>✓ Nessun problema: puoi confermare.</div>
+                    <div style={{ fontSize: 13, color: "var(--ok)", fontWeight: 600 }}>✓ Nessun problema: puoi confermare.</div>
                   )}
                 </div>
               </div>
@@ -2099,7 +2141,7 @@ export default function App() {
             {orario && (
               <div style={{ padding: "12px 16px 0" }}>
                 <button onClick={() => setLandscape(true)} style={{
-                  ...btnPrimary, background: "#1e293b", marginBottom: 0, padding: 11, fontSize: 14,
+                  ...btnPrimary, background: "var(--accent-2)", marginBottom: 0, padding: 11, fontSize: 14,
                 }}>⛶ Vista a tutto schermo (orizzontale)</button>
               </div>
             )}
@@ -2117,19 +2159,19 @@ export default function App() {
       </main>
 
       {tab !== "storico" && tab !== "statistiche" && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: "linear-gradient(transparent, #f1f5f9 30%)" }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: "linear-gradient(transparent, var(--bg) 30%)" }}>
           {bozzaManuale ? (
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={annullaManuale} style={{
-                ...btnPrimary, marginBottom: 0, flex: 1, background: "#fff", color: "#0f172a",
-                border: "1px solid #cbd5e1",
+                ...btnPrimary, marginBottom: 0, flex: 1, background: "var(--surface)", color: "var(--ink)",
+                border: "1px solid var(--line-2)",
               }}>Annulla</button>
               <button onClick={salvaManuale}
                 disabled={salvataggioBozza || !avvisiBozza || avvisiBozza.rossi.length > 0 || avvisiBozza.daCompilare > 0}
                 style={{
                   ...btnPrimary, marginBottom: 0, flex: 2,
                   opacity: (salvataggioBozza || !avvisiBozza || avvisiBozza.rossi.length > 0 || avvisiBozza.daCompilare > 0) ? 0.5 : 1,
-                  boxShadow: "0 4px 14px rgba(15,23,42,.25)",
+                  boxShadow: "var(--shadow-btn)",
                 }}>
                 {salvataggioBozza ? "Salvataggio…" : "Conferma orario"}
               </button>
@@ -2137,13 +2179,13 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={creaManuale} disabled={loading || employees.length === 0 || !persistenza} style={{
-                ...btnPrimary, marginBottom: 0, flex: 1, background: "#fff", color: "#0f172a",
-                border: "1px solid #cbd5e1",
+                ...btnPrimary, marginBottom: 0, flex: 1, background: "var(--surface)", color: "var(--ink)",
+                border: "1px solid var(--line-2)",
                 opacity: loading || employees.length === 0 || !persistenza ? 0.5 : 1,
               }}>Crea orario</button>
               <button onClick={genera} disabled={loading || employees.length === 0} style={{
                 ...btnPrimary, marginBottom: 0, flex: 2, opacity: loading || employees.length === 0 ? 0.5 : 1,
-                boxShadow: "0 4px 14px rgba(15,23,42,.25)",
+                boxShadow: "var(--shadow-btn)",
               }}>
                 {loading ? "Generazione… (~1 min se il server era inattivo)" : "Genera orario"}
               </button>
@@ -2156,16 +2198,16 @@ export default function App() {
       {conferma && (
         <div onClick={() => setConferma(null)} style={modalBgCentro}>
           <div onClick={(e) => e.stopPropagation()} style={modalCentro}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{conferma.titolo}</div>
-            <div style={{ fontSize: 13.5, color: "#475569", lineHeight: 1.5, marginBottom: 16 }}>{conferma.testo}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 8 }}>{conferma.titolo}</div>
+            <div style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 16 }}>{conferma.testo}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setConferma(null)} style={{
-                flex: 1, padding: 12, borderRadius: 10, border: "1px solid #cbd5e1",
-                background: "#fff", color: "#0f172a", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                flex: 1, padding: 12, borderRadius: 10, border: "1px solid var(--line-2)",
+                background: "var(--surface)", color: "var(--ink)", fontSize: 14, fontWeight: 600, cursor: "pointer",
               }}>Annulla</button>
               <button onClick={() => { const f = conferma.onConferma; setConferma(null); if (f) f(); }} style={{
                 flex: 1, padding: 12, borderRadius: 10, border: "none",
-                background: "#0f172a", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 600, cursor: "pointer",
               }}>{conferma.cta || "Conferma"}</button>
             </div>
           </div>
@@ -2182,16 +2224,16 @@ function seedEmployees() {
 }
 
 // ----- stili condivisi -----
-const lbl = { display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", margin: "14px 0 6px", textTransform: "uppercase", letterSpacing: 0.4 };
-const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, marginBottom: 4, boxSizing: "border-box", background: "#fff", color: "#0f172a" };
-const btnPrimary = { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#0f172a", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 12 };
-const empty = { textAlign: "center", color: "#94a3b8", fontSize: 14, padding: "48px 24px", lineHeight: 1.5 };
-const th = { padding: "8px 4px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #e2e8f0" };
-const tdName = { padding: "8px 10px", fontSize: 13, fontWeight: 600, color: "#0f172a", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" };
-const chip = (active) => ({ padding: "7px 12px", borderRadius: 9, border: "1px solid " + (active ? "#0f172a" : "#cbd5e1"), background: active ? "#0f172a" : "#fff", color: active ? "#fff" : "#475569", fontSize: 13, fontWeight: 500, cursor: "pointer" });
-const navBtn = { width: 36, height: 36, borderRadius: "50%", border: "1px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", color: "#0f172a" };
-const modalBg = { position: "fixed", inset: 0, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 };
-const modal = { background: "#fff", borderRadius: "18px 18px 0 0", padding: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" };
+const lbl = { display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-2)", margin: "14px 0 6px", textTransform: "uppercase", letterSpacing: 0.4 };
+const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line-2)", fontSize: 14, marginBottom: 4, boxSizing: "border-box", background: "var(--surface)", color: "var(--ink)" };
+const btnPrimary = { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--on-accent)", fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 12 };
+const empty = { textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px", lineHeight: 1.5 };
+const th = { padding: "8px 4px", fontSize: 12, textAlign: "center", borderBottom: "1px solid var(--line)" };
+const tdName = { padding: "8px 10px", fontSize: 13, fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--line-soft)", whiteSpace: "nowrap" };
+const chip = (active) => ({ padding: "7px 12px", borderRadius: 9, border: "1px solid " + (active ? "var(--accent)" : "var(--line-2)"), background: active ? "var(--accent)" : "var(--surface)", color: active ? "var(--on-accent)" : "var(--ink-2)", fontSize: 13, fontWeight: 500, cursor: "pointer" });
+const navBtn = { width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--line-2)", background: "var(--surface)", fontSize: 18, cursor: "pointer", color: "var(--ink)" };
+const modalBg = { position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 };
+const modal = { background: "var(--surface)", borderRadius: "18px 18px 0 0", padding: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" };
 // varianti per la vista a tutto schermo: menu centrato come scheda compatta
-const modalBgCentro = { position: "fixed", inset: 0, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 };
-const modalCentro = { background: "#fff", borderRadius: 18, padding: 20, width: "90%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto" };
+const modalBgCentro = { position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 };
+const modalCentro = { background: "var(--surface)", borderRadius: 18, padding: 20, width: "90%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto" };

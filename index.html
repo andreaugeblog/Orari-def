@@ -11,13 +11,83 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Turni" />
 <style>
+  /* ---------------------------------------------------------------------
+     TEMA — due palette complete, selezionate da data-tema su <html>.
+     Il tema si applica anche a schermo spento (prima che React parta),
+     perche' lo script in fondo alla pagina lo imposta subito.
+     NOTA: l'immagine esportata e la vista a tutto schermo NON usano queste
+     variabili: restano sempre chiare (colori fissi in App.jsx).
+     --------------------------------------------------------------------- */
+  :root, :root[data-tema="chiaro"] {
+    color-scheme: light;
+    --bg:#f1f5f9; --surface:#ffffff; --surface-2:#f8fafc;
+    --line:#e2e8f0; --line-2:#cbd5e1; --line-soft:#f1f5f9;
+    --ink:#0f172a; --ink-2:#64748b; --ink-3:#94a3b8; --ink-4:#cbd5e1;
+    --accent:#0f172a; --accent-2:#1e293b; --accent-3:#334155; --on-accent:#ffffff;
+    /* intestazione: fascia scura in ENTRAMBI i temi (non e' il colore d'accento) */
+    --chrome:#0f172a; --chrome-ink:#ffffff; --chrome-sub:#94a3b8;
+    --chrome-btn:rgba(255,255,255,.10); --chrome-line:rgba(255,255,255,.16);
+    --overlay:rgba(15,23,42,.4); --shadow-btn:0 4px 14px rgba(15,23,42,.25);
+    --danger:#dc2626; --danger-bg:#fef2f2; --danger-line:#fecaca;
+    --ok:#16a34a; --ok-bg:#f0fdf4;
+    --warn-ink:#b45309;
+    --sync-ink:#9a3412; --sync-bg:#fff7ed; --sync-line:#fed7aa;
+    --info-ink:#1e40af; --info-bg:#eff6ff; --info-line:#bfdbfe;
+    --ferie:#0ea5e9; --malattia:#ef4444; --forte:#f97316; --pref:#8b5cf6;
+    /* turni */
+    --t-m-bg:#fef3e2; --t-m-fg:#b45309; --t-m-bar:#f59e0b; --t-m-line:#f59e0b66;
+    --t-i-bg:#eef2ff; --t-i-fg:#4338ca; --t-i-bar:#6366f1; --t-i-line:#6366f166;
+    --t-s-bg:#ede9fe; --t-s-fg:#6d28d9; --t-s-bar:#8b5cf6; --t-s-line:#8b5cf666;
+    --t-l-bg:#f1f5f9; --t-l-fg:#94a3b8; --t-l-bar:#cbd5e1; --t-l-line:#cbd5e199;
+    --t-x-bg:#e2e8f0; --t-x-fg:#64748b; --t-x-bar:#94a3b8; --t-x-line:#94a3b899;
+    --boot-ink:#64748b;
+  }
+  :root[data-tema="scuro"] {
+    /* fa disegnare al browser i controlli nativi (calendario, tendine,
+       barre di scorrimento) nella loro variante scura */
+    color-scheme: dark;
+    --bg:#0b0f1a; --surface:#141a28; --surface-2:#1a2131;
+    --line:#27314a; --line-2:#33405e; --line-soft:#1e2637;
+    --ink:#e9edf6; --ink-2:#94a1b9; --ink-3:#6c7991; --ink-4:#48546c;
+    --accent:#3b82f6; --accent-2:#1e2b45; --accent-3:#243453; --on-accent:#ffffff;
+    --chrome:#0f1524; --chrome-ink:#f2f5fb; --chrome-sub:#8b98b2;
+    --chrome-btn:rgba(255,255,255,.07); --chrome-line:rgba(255,255,255,.13);
+    --overlay:rgba(3,6,14,.66); --shadow-btn:0 4px 18px rgba(0,0,0,.5);
+    --danger:#f87171; --danger-bg:rgba(248,113,113,.12); --danger-line:rgba(248,113,113,.32);
+    --ok:#4ade80; --ok-bg:rgba(74,222,128,.12);
+    --warn-ink:#fcc25a;
+    --sync-ink:#fdba74; --sync-bg:rgba(251,146,60,.12); --sync-line:rgba(251,146,60,.3);
+    --info-ink:#93c5fd; --info-bg:rgba(59,130,246,.12); --info-line:rgba(59,130,246,.3);
+    --ferie:#38bdf8; --malattia:#f87171; --forte:#fb923c; --pref:#c4b5fd;
+    /* turni: pillole luminose su fondo translucido */
+    --t-m-bg:rgba(245,158,11,.15); --t-m-fg:#fcc25a; --t-m-bar:#f59e0b; --t-m-line:rgba(245,158,11,.4);
+    --t-i-bg:rgba(129,140,248,.16); --t-i-fg:#a9b6fd; --t-i-bar:#818cf8; --t-i-line:rgba(129,140,248,.4);
+    --t-s-bg:rgba(167,139,250,.16); --t-s-fg:#c7b7fe; --t-s-bar:#a78bfa; --t-s-line:rgba(167,139,250,.4);
+    --t-l-bg:rgba(148,163,184,.08); --t-l-fg:#68758c; --t-l-bar:#3f4a60; --t-l-line:rgba(148,163,184,.18);
+    --t-x-bg:rgba(148,163,184,.16); --t-x-fg:#94a1b9; --t-x-bar:#5b6880; --t-x-line:rgba(148,163,184,.32);
+    --boot-ink:#6c7991;
+  }
+
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { background: #f1f5f9; }
+  body { background: var(--bg); }
   #root { min-height: 100vh; }
-  .boot { display:flex; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,system-ui,sans-serif; color:#64748b; }
+  .boot { display:flex; align-items:center; justify-content:center; height:100vh; font-family:-apple-system,system-ui,sans-serif; color:var(--boot-ink); }
   #errbox { display:none; padding:20px; font-family:-apple-system,system-ui,sans-serif; color:#7f1d1d; background:#fef2f2; margin:16px; border-radius:12px; border:1px solid #fecaca; font-size:13px; white-space:pre-wrap; word-break:break-word; }
+  /* i menu a tendina nativi devono restare leggibili nel tema scuro */
+  :root[data-tema="scuro"] select option { background:#141a28; color:#e9edf6; }
 </style>
+<script>
+  /* tema applicato PRIMA del rendering, per non far lampeggiare il bianco */
+  (function () {
+    var t = 'scuro';
+    try { if (localStorage.getItem('turni_tema') === 'chiaro') t = 'chiaro'; } catch (e) {}
+    document.documentElement.setAttribute('data-tema', t);
+    // barra di stato del telefono in tinta con l'intestazione, gia' dal primo avvio
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'chiaro' ? '#0f172a' : '#0f1524');
+  })();
+</script>
 </head>
 <body>
 <div id="root"><div class="boot">Caricamento…</div></div>
@@ -365,14 +435,23 @@ const TURNI = {
   "-": { label: "-", orario: "", start: null, end: null, fascia: "X" }
 };
 const COLORI_TURNO = {
-  mattina: { bg: "#fef3e2", fg: "#b45309", bar: "#f59e0b" },
-  "10-18": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  "11-19": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  "12-20": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1" },
-  sera: { bg: "#ede9fe", fg: "#6d28d9", bar: "#8b5cf6" },
-  libero: { bg: "#f1f5f9", fg: "#94a3b8", bar: "#cbd5e1" },
+  mattina: { bg: "var(--t-m-bg)", fg: "var(--t-m-fg)", bar: "var(--t-m-bar)", line: "var(--t-m-line)" },
+  "10-18": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  "11-19": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  "12-20": { bg: "var(--t-i-bg)", fg: "var(--t-i-fg)", bar: "var(--t-i-bar)", line: "var(--t-i-line)" },
+  sera: { bg: "var(--t-s-bg)", fg: "var(--t-s-fg)", bar: "var(--t-s-bar)", line: "var(--t-s-line)" },
+  libero: { bg: "var(--t-l-bg)", fg: "var(--t-l-fg)", bar: "var(--t-l-bar)", line: "var(--t-l-line)" },
   // grigio più scuro del libero: cella da compilare in "Crea orario"
-  "-": { bg: "#e2e8f0", fg: "#64748b", bar: "#94a3b8" }
+  "-": { bg: "var(--t-x-bg)", fg: "var(--t-x-fg)", bar: "var(--t-x-bar)", line: "var(--t-x-line)" }
+};
+const COLORI_STAMPA = {
+  mattina: { bg: "#fef3e2", fg: "#b45309", bar: "#f59e0b", line: "#f59e0b66" },
+  "10-18": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  "11-19": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  "12-20": { bg: "#eef2ff", fg: "#4338ca", bar: "#6366f1", line: "#6366f166" },
+  sera: { bg: "#ede9fe", fg: "#6d28d9", bar: "#8b5cf6", line: "#8b5cf666" },
+  libero: { bg: "#f1f5f9", fg: "#94a3b8", bar: "#cbd5e1", line: "#cbd5e199" },
+  "-": { bg: "#e2e8f0", fg: "#64748b", bar: "#94a3b8", line: "#94a3b899" }
 };
 const INTERMEDI = ["10-18", "11-19", "12-20"];
 const ASSEGNABILI = ["mattina", "10-18", "11-19", "12-20", "sera"];
@@ -615,7 +694,7 @@ function Toggle({ checked, onChange, label }) {
           height: 22,
           borderRadius: 11,
           flexShrink: 0,
-          background: checked ? "#1e293b" : "#cbd5e1",
+          background: checked ? "var(--accent-2)" : "var(--line-2)",
           position: "relative",
           transition: "background .15s"
         }
@@ -630,13 +709,13 @@ function Toggle({ checked, onChange, label }) {
             width: 18,
             height: 18,
             borderRadius: "50%",
-            background: "#fff",
+            background: "var(--surface)",
             transition: "left .15s"
           }
         }
       )
     ),
-    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#1e293b" } }, label)
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "var(--ink)" } }, label)
   );
 }
 function SchedaDipendente({ emp, onChange, onDelete }) {
@@ -652,15 +731,15 @@ function SchedaDipendente({ emp, onChange, onDelete }) {
     else tf[wd] = turno;
     set({ turni_fissi: tf });
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", marginBottom: 12, overflow: "hidden" } }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { style: { background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", marginBottom: 12, overflow: "hidden" } }, /* @__PURE__ */ React.createElement(
     "div",
     {
       onClick: () => setOpen(!open),
       style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer" }
     },
-    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 34, height: 34, borderRadius: "50%", background: "#1e293b", color: "#fff", display: "grid", placeItems: "center", fontWeight: 600, fontSize: 14 } }, emp.nome ? emp.nome[0].toUpperCase() : "?"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 600, color: "#0f172a", fontSize: 15 } }, emp.nome || "Senza nome"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b" } }, [emp.sa_aprire && "apre", emp.sa_chiudere && "chiude"].filter(Boolean).join(" \xB7 ") || "nessuna competenza"))),
-    /* @__PURE__ */ React.createElement("span", { style: { color: "#94a3b8", fontSize: 18, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "\u203A")
-  ), open && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 16px", borderTop: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Nome"), /* @__PURE__ */ React.createElement("input", { style: inp, value: emp.nome, onChange: (e) => set({ nome: e.target.value }), placeholder: "Nome dipendente" }), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Competenze"), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.sa_aprire, onChange: (v) => set({ sa_aprire: v }), label: "Sa aprire (turno mattina)" }), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.sa_chiudere, onChange: (v) => set({ sa_chiudere: v }), label: "Sa chiudere (turno sera)" }), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Giorni liberi fissi"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement("button", { key: i, onClick: () => toggleGiornoLibero(i), style: chip(emp.giorni_liberi_fissi.includes(i)) }, g))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turni fissi obbligatori"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 40, fontSize: 13, color: "#475569" } }, g), /* @__PURE__ */ React.createElement("select", { style: __spreadProps(__spreadValues({}, inp), { marginBottom: 0, flex: 1 }), value: emp.turni_fissi[i] || "", onChange: (e) => setTurnoFisso(i, e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 nessuno \u2014"), ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Riposo minimo tra turni"), /* @__PURE__ */ React.createElement("select", { style: inp, value: emp.riposo_minimo_ore, onChange: (e) => set({ riposo_minimo_ore: Number(e.target.value) }) }, [12, 11, 10, 9].map((h) => /* @__PURE__ */ React.createElement("option", { key: h, value: h }, h, " ore", h === 12 ? " (standard)" : ""))), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.libero_sacrificabile, onChange: (v) => set({ libero_sacrificabile: v }), label: "Giorno libero sacrificabile (casi estremi)" }), /* @__PURE__ */ React.createElement("button", { onClick: onDelete, style: { marginTop: 14, width: "100%", padding: 10, borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 14, fontWeight: 500, cursor: "pointer" } }, "Elimina dipendente")));
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 34, height: 34, borderRadius: "50%", background: "var(--accent-2)", color: "var(--on-accent)", display: "grid", placeItems: "center", fontWeight: 600, fontSize: 14 } }, emp.nome ? emp.nome[0].toUpperCase() : "?"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 600, color: "var(--ink)", fontSize: 15 } }, emp.nome || "Senza nome"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)" } }, [emp.sa_aprire && "apre", emp.sa_chiudere && "chiude"].filter(Boolean).join(" \xB7 ") || "nessuna competenza"))),
+    /* @__PURE__ */ React.createElement("span", { style: { color: "var(--ink-3)", fontSize: 18, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "\u203A")
+  ), open && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 16px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Nome"), /* @__PURE__ */ React.createElement("input", { style: inp, value: emp.nome, onChange: (e) => set({ nome: e.target.value }), placeholder: "Nome dipendente" }), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Competenze"), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.sa_aprire, onChange: (v) => set({ sa_aprire: v }), label: "Sa aprire (turno mattina)" }), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.sa_chiudere, onChange: (v) => set({ sa_chiudere: v }), label: "Sa chiudere (turno sera)" }), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Giorni liberi fissi"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement("button", { key: i, onClick: () => toggleGiornoLibero(i), style: chip(emp.giorni_liberi_fissi.includes(i)) }, g))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turni fissi obbligatori"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 40, fontSize: 13, color: "var(--ink-2)" } }, g), /* @__PURE__ */ React.createElement("select", { style: __spreadProps(__spreadValues({}, inp), { marginBottom: 0, flex: 1 }), value: emp.turni_fissi[i] || "", onChange: (e) => setTurnoFisso(i, e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 nessuno \u2014"), ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Riposo minimo tra turni"), /* @__PURE__ */ React.createElement("select", { style: inp, value: emp.riposo_minimo_ore, onChange: (e) => set({ riposo_minimo_ore: Number(e.target.value) }) }, [12, 11, 10, 9].map((h) => /* @__PURE__ */ React.createElement("option", { key: h, value: h }, h, " ore", h === 12 ? " (standard)" : ""))), /* @__PURE__ */ React.createElement(Toggle, { checked: emp.libero_sacrificabile, onChange: (v) => set({ libero_sacrificabile: v }), label: "Giorno libero sacrificabile (casi estremi)" }), /* @__PURE__ */ React.createElement("button", { onClick: onDelete, style: { marginTop: 14, width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--danger-line)", background: "var(--danger-bg)", color: "var(--danger)", fontSize: 14, fontWeight: 500, cursor: "pointer" } }, "Elimina dipendente")));
 }
 function TabDipendenti({ employees, setEmployees }) {
   const addEmp = () => {
@@ -708,7 +787,7 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
     });
   };
   const totAssenze = assenze.reduce((s, a) => s + a.giorni.size, 0);
-  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAperto(!aperto), style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAperto(!aperto), style: {
     width: "100%",
     display: "flex",
     justifyContent: "space-between",
@@ -717,7 +796,7 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
     border: "none",
     cursor: "pointer",
     padding: 0
-  } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0, marginBottom: 0, cursor: "pointer" }) }, "Assenze di questa settimana ", totAssenze > 0 ? `(${totAssenze})` : "(facoltativo)"), /* @__PURE__ */ React.createElement("span", { style: { color: "#94a3b8", fontSize: 14 } }, aperto ? "\u25B4" : "\u25BE")), aperto && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b", marginBottom: 8 } }, "Permessi/visite: la persona scelta non lavorer\xE0 nei giorni selezionati. Vale solo per questa generazione."), /* @__PURE__ */ React.createElement("select", { style: inp, value: empSel, onChange: (e) => setEmpSel(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 scegli una persona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome"))), empSel && /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginTop: 8 } }, giorniPeriodo.map((d, i) => {
+  } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0, marginBottom: 0, cursor: "pointer" }) }, "Assenze di questa settimana ", totAssenze > 0 ? `(${totAssenze})` : "(facoltativo)"), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--ink-3)", fontSize: 14 } }, aperto ? "\u25B4" : "\u25BE")), aperto && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)", marginBottom: 8 } }, "Permessi/visite: la persona scelta non lavorer\xE0 nei giorni selezionati. Vale solo per questa generazione."), /* @__PURE__ */ React.createElement("select", { style: inp, value: empSel, onChange: (e) => setEmpSel(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 scegli una persona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome"))), empSel && /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginTop: 8 } }, giorniPeriodo.map((d, i) => {
     const isoD = iso(d);
     const sel = giorniDi(empSel).has(isoD);
     return /* @__PURE__ */ React.createElement(
@@ -730,18 +809,18 @@ function SelettoreAssenze({ employees, assenze, setAssenze, start, numWeeks }) {
           borderRadius: 8,
           cursor: "pointer",
           textAlign: "center",
-          border: sel ? "1px solid #dc2626" : "1px solid #e2e8f0",
-          background: sel ? "#fef2f2" : "#fff"
+          border: sel ? "1px solid var(--danger)" : "1px solid var(--line)",
+          background: sel ? "var(--danger-bg)" : "var(--surface)"
         }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: sel ? "#dc2626" : "#94a3b8" } }, GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]),
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: sel ? "#dc2626" : "#0f172a" } }, d.getDate())
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: sel ? "var(--danger)" : "var(--ink-3)" } }, GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: sel ? "var(--danger)" : "var(--ink)" } }, d.getDate())
     );
   })), assenze.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, assenze.map((a) => {
     var _a;
     const nome = ((_a = employees.find((e) => e.id === a.employee_id)) == null ? void 0 : _a.nome) || "?";
     const giorniOrdinati = [...a.giorni].sort();
-    return /* @__PURE__ */ React.createElement("div", { key: a.employee_id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5, color: "#0f172a", padding: "4px 0" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, nome), " assente: ", giorniOrdinati.map((g) => {
+    return /* @__PURE__ */ React.createElement("div", { key: a.employee_id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5, color: "var(--ink)", padding: "4px 0" } }, /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", null, nome), " assente: ", giorniOrdinati.map((g) => {
       const [y, m, d] = g.split("-");
       return `${+d}/${+m}`;
     }).join(", ")));
@@ -770,7 +849,7 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
     });
   };
   const tot = presenze.reduce((s, p) => s + Object.keys(p.giorni).length, 0);
-  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAperto(!aperto), style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAperto(!aperto), style: {
     width: "100%",
     display: "flex",
     justifyContent: "space-between",
@@ -779,7 +858,7 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
     border: "none",
     cursor: "pointer",
     padding: 0
-  } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0, marginBottom: 0, cursor: "pointer" }) }, "Presenze obbligate ", tot > 0 ? `(${tot})` : "(facoltativo)"), /* @__PURE__ */ React.createElement("span", { style: { color: "#94a3b8", fontSize: 14 } }, aperto ? "\u25B4" : "\u25BE")), aperto && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b", marginBottom: 8 } }, "La persona scelta far\xE0 obbligatoriamente il turno indicato nei giorni selezionati. Vale solo per questa generazione."), /* @__PURE__ */ React.createElement("select", { style: inp, value: empSel, onChange: (e) => setEmpSel(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 scegli una persona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome"))), empSel && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4, marginBottom: 6 } }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTurnoSel(t), style: chip(turnoSel === t) }, TURNI[t].orario))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 } }, giorniPeriodo.map((d, i) => {
+  } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0, marginBottom: 0, cursor: "pointer" }) }, "Presenze obbligate ", tot > 0 ? `(${tot})` : "(facoltativo)"), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--ink-3)", fontSize: 14 } }, aperto ? "\u25B4" : "\u25BE")), aperto && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)", marginBottom: 8 } }, "La persona scelta far\xE0 obbligatoriamente il turno indicato nei giorni selezionati. Vale solo per questa generazione."), /* @__PURE__ */ React.createElement("select", { style: inp, value: empSel, onChange: (e) => setEmpSel(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 scegli una persona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome"))), empSel && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4, marginBottom: 6 } }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTurnoSel(t), style: chip(turnoSel === t) }, TURNI[t].orario))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 } }, giorniPeriodo.map((d, i) => {
     const isoD = iso(d);
     const turnoGiorno = giorniDi(empSel)[isoD];
     const sel = turnoGiorno != null;
@@ -793,19 +872,19 @@ function SelettorePresenze({ employees, presenze, setPresenze, start, numWeeks }
           borderRadius: 8,
           cursor: "pointer",
           textAlign: "center",
-          border: sel ? "1px solid #16a34a" : "1px solid #e2e8f0",
-          background: sel ? "#f0fdf4" : "#fff"
+          border: sel ? "1px solid var(--ok)" : "1px solid var(--line)",
+          background: sel ? "var(--ok-bg)" : "var(--surface)"
         }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: sel ? "#16a34a" : "#94a3b8" } }, GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]),
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: sel ? "#16a34a" : "#0f172a" } }, d.getDate()),
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: sel ? "#16a34a" : "transparent", minHeight: 11 } }, sel ? TURNI[turnoGiorno].orario : "\xB7")
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: sel ? "var(--ok)" : "var(--ink-3)" } }, GIORNI[d.getDay() === 0 ? 6 : d.getDay() - 1]),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: sel ? "var(--ok)" : "var(--ink)" } }, d.getDate()),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: sel ? "var(--ok)" : "transparent", minHeight: 11 } }, sel ? TURNI[turnoGiorno].orario : "\xB7")
     );
   }))), presenze.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, presenze.map((p) => {
     var _a;
     const nome = ((_a = employees.find((e) => e.id === p.employee_id)) == null ? void 0 : _a.nome) || "?";
     const giorniOrdinati = Object.keys(p.giorni).sort();
-    return /* @__PURE__ */ React.createElement("div", { key: p.employee_id, style: { fontSize: 12.5, color: "#0f172a", padding: "4px 0" } }, /* @__PURE__ */ React.createElement("b", null, nome), " deve fare: ", giorniOrdinati.map((g) => {
+    return /* @__PURE__ */ React.createElement("div", { key: p.employee_id, style: { fontSize: 12.5, color: "var(--ink)", padding: "4px 0" } }, /* @__PURE__ */ React.createElement("b", null, nome), " deve fare: ", giorniOrdinati.map((g) => {
       const [y, m, d] = g.split("-");
       return `${+d}/${+m} ${TURNI[p.giorni[g]].orario}`;
     }).join(", "));
@@ -827,7 +906,7 @@ function MiniCalendario({ selected, onToggle, mesiVisibili = 2, minDate = null }
     const celle = [];
     for (let i = 0; i < primoWd; i++) celle.push(null);
     for (let g = 1; g <= giorniNelMese; g++) celle.push(g);
-    return /* @__PURE__ */ React.createElement("div", { key: mi, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6, textAlign: "center" } }, nomeMese(primo)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 } }, ["L", "M", "M", "G", "V", "S", "D"].map((g, i) => /* @__PURE__ */ React.createElement("div", { key: "h" + i, style: { textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#94a3b8", padding: "2px 0" } }, g)), celle.map((g, i) => {
+    return /* @__PURE__ */ React.createElement("div", { key: mi, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 6, textAlign: "center" } }, nomeMese(primo)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 } }, ["L", "M", "M", "G", "V", "S", "D"].map((g, i) => /* @__PURE__ */ React.createElement("div", { key: "h" + i, style: { textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", padding: "2px 0" } }, g)), celle.map((g, i) => {
       if (g == null) return /* @__PURE__ */ React.createElement("div", { key: "e" + i });
       const d = new Date(anno, mese, g);
       const isoD = iso(d);
@@ -846,9 +925,9 @@ function MiniCalendario({ selected, onToggle, mesiVisibili = 2, minDate = null }
             cursor: disabilitato ? "default" : "pointer",
             fontSize: 13,
             fontWeight: sel ? 700 : 500,
-            background: sel ? "#f97316" : disabilitato ? "#f8fafc" : we ? "#f1f5f9" : "#fff",
-            color: sel ? "#fff" : disabilitato ? "#cbd5e1" : "#0f172a",
-            border: sel ? "1px solid #f97316" : "1px solid #e2e8f0"
+            background: sel ? "var(--forte)" : disabilitato ? "var(--surface-2)" : we ? "var(--bg)" : "var(--surface)",
+            color: sel ? "var(--on-accent)" : disabilitato ? "var(--ink-4)" : "var(--ink)",
+            border: sel ? "1px solid var(--forte)" : "1px solid var(--line)"
           }
         },
         g
@@ -897,8 +976,8 @@ function TabCalendario({ employees, entries, setEntries, start, numWeeks }) {
     if (en.tipo === "giorno_forte") return `Giorno forte \xB7 ${en.target_mattina}+${en.target_sera}`;
     return `Preferenza \xB7 ${nome} \u2192 ${TURNI[en.turno_preferito].label} (p${en.priorita})`;
   };
-  const colorEntry = (t) => t === "ferie" ? "#0ea5e9" : t === "malattia" ? "#ef4444" : t === "giorno_forte" ? "#f97316" : "#8b5cf6";
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tipo di marcatura"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 4 } }, [["ferie", "Ferie"], ["malattia", "Malattia"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTipo(v), style: chip(tipo === v) }, l))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dipendente"), /* @__PURE__ */ React.createElement("select", { style: inp, value: empId, onChange: (e) => setEmpId(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 seleziona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome")))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dal"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: from, onChange: (e) => setFrom(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Al"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: to, onChange: (e) => setTo(e.target.value) }))), tipo === "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone mattina"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: tm, onChange: (e) => setTm(Number(e.target.value)) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone sera"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: ts, onChange: (e) => setTs(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tocca i giorni forti (anche staccati)"), /* @__PURE__ */ React.createElement(MiniCalendario, { selected: giorniForti, onToggle: toggleGiornoForte, mesiVisibili: 2 }), giorniForti.size > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#f97316", fontWeight: 600, marginBottom: 4 } }, giorniForti.size, " ", giorniForti.size === 1 ? "giorno selezionato" : "giorni selezionati")), tipo === "preferenza_turno" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turno preferito"), /* @__PURE__ */ React.createElement("select", { style: inp, value: turnoPref, onChange: (e) => setTurnoPref(e.target.value) }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Priorit\xE0 (6\u201310)"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 6, max: 10, style: inp, value: prio, onChange: (e) => setPrio(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("button", { onClick: add, style: btnPrimary }, "+ Aggiungi al calendario")), entries.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: empty }, "Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.") : entries.map((en, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, color: "#0f172a" } }, label(en)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b" } }, en.start === en.end ? en.start : `${en.start} \u2192 ${en.end}`))), /* @__PURE__ */ React.createElement("button", { onClick: () => setEntries(entries.filter((_, j) => j !== i)), style: { background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" } }, "\xD7"))));
+  const colorEntry = (t) => t === "ferie" ? "var(--ferie)" : t === "malattia" ? "var(--malattia)" : t === "giorno_forte" ? "var(--forte)" : "var(--pref)";
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", padding: 16, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tipo di marcatura"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 4 } }, [["ferie", "Ferie"], ["malattia", "Malattia"], ["giorno_forte", "Giorno forte"], ["preferenza_turno", "Preferenza"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTipo(v), style: chip(tipo === v) }, l))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dipendente"), /* @__PURE__ */ React.createElement("select", { style: inp, value: empId, onChange: (e) => setEmpId(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014 seleziona \u2014"), employees.map((e) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, e.nome || "senza nome")))), tipo !== "giorno_forte" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Dal"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: from, onChange: (e) => setFrom(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Al"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: to, onChange: (e) => setTo(e.target.value) }))), tipo === "giorno_forte" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone mattina"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: tm, onChange: (e) => setTm(Number(e.target.value)) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Persone sera"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 2, style: inp, value: ts, onChange: (e) => setTs(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Tocca i giorni forti (anche staccati)"), /* @__PURE__ */ React.createElement(MiniCalendario, { selected: giorniForti, onToggle: toggleGiornoForte, mesiVisibili: 2 }), giorniForti.size > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "var(--forte)", fontWeight: 600, marginBottom: 4 } }, giorniForti.size, " ", giorniForti.size === 1 ? "giorno selezionato" : "giorni selezionati")), tipo === "preferenza_turno" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Turno preferito"), /* @__PURE__ */ React.createElement("select", { style: inp, value: turnoPref, onChange: (e) => setTurnoPref(e.target.value) }, ASSEGNABILI.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, TURNI[t].label, " (", TURNI[t].orario, ")")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Priorit\xE0 (6\u201310)"), /* @__PURE__ */ React.createElement("input", { type: "number", min: 6, max: 10, style: inp, value: prio, onChange: (e) => setPrio(Number(e.target.value)) }))), /* @__PURE__ */ React.createElement("button", { onClick: add, style: btnPrimary }, "+ Aggiungi al calendario")), entries.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: empty }, "Nessuna marcatura. Aggiungi ferie, giorni forti o preferenze di turno.") : entries.map((en, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 4, height: 34, borderRadius: 2, background: colorEntry(en.tipo) } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, color: "var(--ink)" } }, label(en)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)" } }, en.start === en.end ? en.start : `${en.start} \u2192 ${en.end}`))), /* @__PURE__ */ React.createElement("button", { onClick: () => setEntries(entries.filter((_, j) => j !== i)), style: { background: "none", border: "none", color: "var(--ink-3)", fontSize: 20, cursor: "pointer" } }, "\xD7"))));
 }
 function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, motore, conflitti, violazioni, draft }) {
   var _a;
@@ -913,10 +992,10 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
     var _a2;
     return ((_a2 = orario.find((a) => a.employee_id === empId && a.giorno === iso(d))) == null ? void 0 : _a2.turno) || "libero";
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 80 } }, messaggi && messaggi.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: 16, padding: 12, borderRadius: 12, background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: 13 } }, messaggi.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i }, m))), violazioni && violazioni.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: "0 16px 8px", padding: 12, borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: 12.5 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, marginBottom: 4 } }, "Note sull'orario"), violazioni.map((v, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { marginBottom: 2 } }, "\xB7 ", v))), numWeeks > 1 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 0" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSettimana(Math.max(0, settimana - 1)), disabled: settimana === 0, style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 600, color: "#0f172a" } }, "Settimana ", settimana + 1, " di ", numWeeks), /* @__PURE__ */ React.createElement("button", { onClick: () => setSettimana(Math.min(numWeeks - 1, settimana + 1)), disabled: settimana === numWeeks - 1, style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto", padding: "0 12px" } }, /* @__PURE__ */ React.createElement("table", { style: { borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 620 } }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: __spreadProps(__spreadValues({}, th), { textAlign: "left", position: "sticky", left: 0, background: "#f8fafc", zIndex: 2 }) }, "Dipendente"), giorni.map((d, i) => {
+  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 80 } }, messaggi && messaggi.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: 16, padding: 12, borderRadius: 12, background: "var(--sync-bg)", border: "1px solid var(--sync-line)", color: "var(--sync-ink)", fontSize: 13 } }, messaggi.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i }, m))), violazioni && violazioni.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: "0 16px 8px", padding: 12, borderRadius: 12, background: "var(--info-bg)", border: "1px solid var(--info-line)", color: "var(--info-ink)", fontSize: 12.5 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, marginBottom: 4 } }, "Note sull'orario"), violazioni.map((v, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { marginBottom: 2 } }, "\xB7 ", v))), numWeeks > 1 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 0" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSettimana(Math.max(0, settimana - 1)), disabled: settimana === 0, style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 600, color: "var(--ink)" } }, "Settimana ", settimana + 1, " di ", numWeeks), /* @__PURE__ */ React.createElement("button", { onClick: () => setSettimana(Math.min(numWeeks - 1, settimana + 1)), disabled: settimana === numWeeks - 1, style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto", padding: "0 12px" } }, /* @__PURE__ */ React.createElement("table", { style: { borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 620 } }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: __spreadProps(__spreadValues({}, th), { textAlign: "left", position: "sticky", left: 0, background: "var(--surface-2)", zIndex: 2 }) }, "Dipendente"), giorni.map((d, i) => {
     const we = i >= 5;
-    return /* @__PURE__ */ React.createElement("th", { key: i, style: __spreadProps(__spreadValues({}, th), { background: we ? "#f1f5f9" : "#f8fafc" }) }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: we ? "#64748b" : "#0f172a" } }, GIORNI[i]), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", fontWeight: 400 } }, fmtGiorno(d)));
-  }))), /* @__PURE__ */ React.createElement("tbody", null, employees.map((e) => /* @__PURE__ */ React.createElement("tr", { key: e.id }, /* @__PURE__ */ React.createElement("td", { style: __spreadProps(__spreadValues({}, tdName), { position: "sticky", left: 0, background: "#fff", zIndex: 1 }) }, e.nome || "\u2014"), giorni.map((d, i) => {
+    return /* @__PURE__ */ React.createElement("th", { key: i, style: __spreadProps(__spreadValues({}, th), { background: we ? "var(--bg)" : "var(--surface-2)" }) }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: we ? "var(--ink-2)" : "var(--ink)" } }, GIORNI[i]), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "var(--ink-3)", fontWeight: 400 } }, fmtGiorno(d)));
+  }))), /* @__PURE__ */ React.createElement("tbody", null, employees.map((e) => /* @__PURE__ */ React.createElement("tr", { key: e.id }, /* @__PURE__ */ React.createElement("td", { style: __spreadProps(__spreadValues({}, tdName), { position: "sticky", left: 0, background: "var(--surface)", zIndex: 1 }) }, e.nome || "\u2014"), giorni.map((d, i) => {
     const t = get(e.id, d);
     const c = COLORI_TURNO[t];
     const key = e.id + iso(d);
@@ -927,7 +1006,7 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
         onClick: () => setCella({ empId: e.id, isoDay: iso(d) }),
         style: {
           width: "100%",
-          border: conflitto ? "2px solid #dc2626" : "1px solid " + c.bar + "40",
+          border: conflitto ? "2px solid var(--danger)" : "1px solid " + c.bar + "40",
           background: c.bg,
           borderRadius: 8,
           padding: "6px 4px",
@@ -942,11 +1021,11 @@ function TabOrario({ orario, employees, start, numWeeks, onModifica, messaggi, m
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: c.fg, opacity: 0.7 } }, TURNI[t].orario)
     ));
   })))))), /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => esportaOrario(orario, employees, weekStart), style: __spreadProps(__spreadValues({}, btnPrimary), {
-    background: "#334155",
+    background: "var(--accent-3)",
     marginBottom: 0,
     padding: 11,
     fontSize: 14
-  }) }, "\u2913 Esporta orario")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, padding: 16, fontSize: 12, color: "#64748b" } }, Object.entries({ mattina: "Mattina", "10-18": "Intermedio", sera: "Sera", libero: "Libero" }).map(([k, l]) => /* @__PURE__ */ React.createElement("span", { key: k, style: { display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 12, height: 12, borderRadius: 3, background: COLORI_TURNO[k].bar } }), " ", l)), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: "auto" } }, "Motore: ", motore === "backend" ? "CP-SAT" : motore === "manuale" ? "creato a mano" : "locale (bozza)")), cella && /* @__PURE__ */ React.createElement("div", { onClick: () => setCella(null), style: modalBg }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: modal }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 600, marginBottom: 4, color: "#0f172a" } }, (_a = employees.find((e) => e.id === cella.empId)) == null ? void 0 : _a.nome), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#64748b", marginBottom: 14 } }, GIORNI_FULL[(new Date(cella.isoDay).getDay() + 6) % 7], " ", fmtGiorno(new Date(cella.isoDay))), [...ASSEGNABILI, "libero", ...draft ? ["-"] : []].map((t) => /* @__PURE__ */ React.createElement(
+  }) }, "\u2913 Esporta orario")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, padding: 16, fontSize: 12, color: "var(--ink-2)" } }, Object.entries({ mattina: "Mattina", "10-18": "Intermedio", sera: "Sera", libero: "Libero" }).map(([k, l]) => /* @__PURE__ */ React.createElement("span", { key: k, style: { display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 12, height: 12, borderRadius: 3, background: COLORI_TURNO[k].bar } }), " ", l)), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: "auto" } }, "Motore: ", motore === "backend" ? "CP-SAT" : motore === "manuale" ? "creato a mano" : "locale (bozza)")), cella && /* @__PURE__ */ React.createElement("div", { onClick: () => setCella(null), style: modalBg }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: modal }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 600, marginBottom: 4, color: "var(--ink)" } }, (_a = employees.find((e) => e.id === cella.empId)) == null ? void 0 : _a.nome), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ink-2)", marginBottom: 14 } }, GIORNI_FULL[(new Date(cella.isoDay).getDay() + 6) % 7], " ", fmtGiorno(new Date(cella.isoDay))), [...ASSEGNABILI, "libero", ...draft ? ["-"] : []].map((t) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: t,
@@ -1150,7 +1229,7 @@ function esportaOrario(orario, employees, weekStart) {
     ctx.fillText(e.nome || "\u2014", M + 6, y + RIGA_H / 2, NOME_W - 16);
     giorni.forEach((d, i) => {
       const t = get(e.id, d);
-      const c = COLORI_TURNO[t] || COLORI_TURNO["libero"];
+      const c = COLORI_STAMPA[t] || COLORI_STAMPA["libero"];
       const x = M + NOME_W + i * COL_W;
       rr(x + 5, y + 7, COL_W - 10, RIGA_H - 14, 10);
       ctx.fillStyle = c.bg;
@@ -1216,19 +1295,19 @@ function TabStorico({ storico, persistenza, onApri }) {
     const k = meseLabel(s.data_inizio);
     (gruppi[k] = gruppi[k] || []).push(s);
   }
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, Object.entries(gruppi).map(([mese, lista]) => /* @__PURE__ */ React.createElement("div", { key: mese, style: { marginBottom: 18 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 } }, mese), lista.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => onApri(s), style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, Object.entries(gruppi).map(([mese, lista]) => /* @__PURE__ */ React.createElement("div", { key: mese, style: { marginBottom: 18 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 } }, mese), lista.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => onApri(s), style: {
     width: "100%",
     textAlign: "left",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    background: "#fff",
-    border: "1px solid #e2e8f0",
+    background: "var(--surface)",
+    border: "1px solid var(--line)",
     borderRadius: 12,
     padding: "13px 14px",
     marginBottom: 8,
     cursor: "pointer"
-  } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, fontWeight: 600, color: "#0f172a" } }, "Settimana dal ", rangeSettimana(s.data_inizio)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b" } }, s.stato === "OPTIMAL" ? "completo" : s.stato.toLowerCase())), /* @__PURE__ */ React.createElement("span", { style: { color: "#94a3b8", fontSize: 18 } }, "\u203A"))))));
+  } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, fontWeight: 600, color: "var(--ink)" } }, "Settimana dal ", rangeSettimana(s.data_inizio)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)" } }, s.stato === "OPTIMAL" ? "completo" : s.stato.toLowerCase())), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--ink-3)", fontSize: 18 } }, "\u203A"))))));
 }
 function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onModifica, onExit }) {
   var _a;
@@ -1260,7 +1339,7 @@ function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onMod
     return /* @__PURE__ */ React.createElement("div", { key: i, style: { flex: 1, padding: "6px 2px", textAlign: "center", background: we ? "#f1f5f9" : "#f8fafc", borderLeft: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: we ? "#64748b" : "#0f172a" } }, GIORNI[i]), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10.5, color: "#94a3b8" } }, fmtGiorno(d)));
   })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 } }, employees.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { flex: 1, display: "flex", borderBottom: "1px solid #f1f5f9", minHeight: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { width: "13%", padding: "0 8px", fontSize: 13, fontWeight: 600, color: "#0f172a", display: "flex", alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" } }, e.nome), giorni.map((d, i) => {
     const t = get(e.id, d);
-    const c = COLORI_TURNO[t];
+    const c = COLORI_STAMPA[t];
     const conflitto = conflitti == null ? void 0 : conflitti.has(e.id + iso(d));
     return /* @__PURE__ */ React.createElement(
       "button",
@@ -1271,7 +1350,7 @@ function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onMod
           flex: 1,
           margin: 3,
           borderRadius: 8,
-          border: conflitto ? "2px solid #dc2626" : "1px solid " + c.bar + "40",
+          border: conflitto ? "2px solid #dc2626" : "1px solid " + c.line,
           background: c.bg,
           cursor: "pointer",
           display: "flex",
@@ -1300,12 +1379,12 @@ function OrarioFullscreen({ orario, employees, start, numWeeks, conflitti, onMod
         marginBottom: 6,
         borderRadius: 10,
         cursor: "pointer",
-        border: "1px solid " + COLORI_TURNO[t].bar + "55",
-        background: COLORI_TURNO[t].bg
+        border: "1px solid " + COLORI_STAMPA[t].line,
+        background: COLORI_STAMPA[t].bg
       }
     },
-    /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 600, color: COLORI_TURNO[t].fg } }, TURNI[t].label),
-    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORI_TURNO[t].fg, opacity: 0.7 } }, TURNI[t].orario)
+    /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 600, color: COLORI_STAMPA[t].fg } }, TURNI[t].label),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: COLORI_STAMPA[t].fg, opacity: 0.7 } }, TURNI[t].orario)
   )))));
 }
 function calcolaPeriodo(scelta) {
@@ -1388,16 +1467,29 @@ function TabStatistiche({ persistenza }) {
   const archiviati = emps.filter((e) => e.archiviato);
   const RigaStat = ({ e }) => {
     const s = stats && stats[e.id] || { mattine: 0, sere: 0, intermedi: 0, weekend: 0, liberi: 0 };
-    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 13.5, fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 } }, e.nome), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.mattine), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.sere), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.intermedi), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.weekend), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.liberi));
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 13.5, fontWeight: 600, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 6 } }, e.nome), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.mattine), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.sere), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.intermedi), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.weekend), /* @__PURE__ */ React.createElement("div", { style: statCell }, s.liberi));
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo turni"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, [["1m", "1 mese"], ["3m", "3 mesi"], ["6m", "6 mesi"], ["12m", "12 mesi"], ["anno", "Inizio anno"], ["custom", "Intervallo"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setPeriodo(v), style: chip(periodo === v) }, l))), periodo === "custom" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "Da"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataInizio, onChange: (e) => setDataInizio(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "A"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataFine, onChange: (e) => setDataFine(e.target.value) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0", marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#94a3b8", padding: "10px 0" } }, "Caricamento\u2026"), attivi.length === 0 && !caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "16px 0" } }, "Nessun dato per il periodo selezionato."), attivi.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e })), archiviati.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" } }, "Archivio"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8", marginBottom: 8 } }, "Dipendenti non pi\xF9 attivi \u2014 dati conservati."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid #e2e8f0" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), archiviati.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" } }, "Ferie per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno - 1), style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: "#0f172a", minWidth: 56, textAlign: "center" } }, anno), /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno + 1), style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#0f172a" } }, ferie[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "#94a3b8" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "10px 0" } }, "Nessun dato.")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" } }, "Malattia per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8", marginBottom: 8 } }, "Conta tutti i giorni di malattia dell'anno ", anno, "."), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f1f5f9" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "#94a3b8" : "#0f172a" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#0f172a" } }, malattia[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "#94a3b8" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#94a3b8", padding: "10px 0" } }, "Nessun dato.")));
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: 16, paddingBottom: 40 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo turni"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 } }, [["1m", "1 mese"], ["3m", "3 mesi"], ["6m", "6 mesi"], ["12m", "12 mesi"], ["anno", "Inizio anno"], ["custom", "Intervallo"]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setPeriodo(v), style: chip(periodo === v) }, l))), periodo === "custom" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "Da"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataInizio, onChange: (e) => setDataInizio(e.target.value) })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("label", { style: __spreadProps(__spreadValues({}, lbl), { marginTop: 0 }) }, "A"), /* @__PURE__ */ React.createElement("input", { type: "date", style: inp, value: dataFine, onChange: (e) => setDataFine(e.target.value) }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid var(--line)", marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "var(--ink-3)", padding: "10px 0" } }, "Caricamento\u2026"), attivi.length === 0 && !caricamento && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ink-3)", padding: "16px 0" } }, "Nessun dato per il periodo selezionato."), attivi.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e })), archiviati.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "22px 0 4px" } }, "Archivio"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 } }, "Dipendenti non pi\xF9 attivi \u2014 dati conservati."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "2px solid var(--line)" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: "0 0 30%", fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" } }, "Dipendente"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Matt"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Sere"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Inter"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "WE"), /* @__PURE__ */ React.createElement("div", { style: statHead }, "Liberi")), archiviati.map((e) => /* @__PURE__ */ React.createElement(RigaStat, { key: e.id, e }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 8px" } }, "Ferie per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno - 1), style: navBtn }, "\u2039"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: "var(--ink)", minWidth: 56, textAlign: "center" } }, anno), /* @__PURE__ */ React.createElement("button", { onClick: () => setAnno(anno + 1), style: navBtn }, "\u203A")), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "var(--ink-3)" : "var(--ink)" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "var(--ink)" } }, ferie[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "var(--ink-3)" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ink-3)", padding: "10px 0" } }, "Nessun dato.")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, margin: "28px 0 4px" } }, "Malattia per anno solare"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 } }, "Conta tutti i giorni di malattia dell'anno ", anno, "."), /* @__PURE__ */ React.createElement("div", null, emps.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 600, color: e.archiviato ? "var(--ink-3)" : "var(--ink)" } }, e.nome, e.archiviato ? " (archivio)" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "var(--ink)" } }, malattia[e.id] || 0, " ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 400, color: "var(--ink-3)" } }, "giorni")))), emps.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ink-3)", padding: "10px 0" } }, "Nessun dato.")));
 }
-const statCell = { flex: 1, textAlign: "center", fontSize: 13.5, color: "#0f172a", fontVariantNumeric: "tabular-nums" };
-const statHead = { flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase" };
+const statCell = { flex: 1, textAlign: "center", fontSize: 13.5, color: "var(--ink)", fontVariantNumeric: "tabular-nums" };
+const statHead = { flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" };
 const BACKEND = "https://orari-buono.onrender.com";
 const LS_EMP = "turni_employees";
 const LS_CAL = "turni_calendar";
 const LS_RINFORZO = "turni_rinforzo";
+const LS_TEMA = "turni_tema";
+function temaCorrente() {
+  return document.documentElement.getAttribute("data-tema") === "chiaro" ? "chiaro" : "scuro";
+}
+function applicaTema(t) {
+  document.documentElement.setAttribute("data-tema", t);
+  try {
+    localStorage.setItem(LS_TEMA, t);
+  } catch (e) {
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", t === "chiaro" ? "#0f172a" : "#0f1524");
+}
 function leggiLocale(chiave) {
   try {
     const raw = localStorage.getItem(chiave);
@@ -1480,6 +1572,11 @@ function App() {
   const [assenze, setAssenze] = useState([]);
   const [presenze, setPresenze] = useState([]);
   const [giorniRinforzo, setGiorniRinforzo] = useState(() => leggiLocale(LS_RINFORZO) || [2, 3, 4]);
+  const [tema, setTema] = useState(temaCorrente);
+  const cambiaTema = (t) => {
+    applicaTema(t);
+    setTema(t);
+  };
   const [bozzaManuale, setBozzaManuale] = useState(false);
   const [salvataggioBozza, setSalvataggioBozza] = useState(false);
   const [prevInfo, setPrevInfo] = useState({ vigilia: {}, tail: {} });
@@ -1745,7 +1842,35 @@ function App() {
       }
     );
   }
-  return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" } }, /* @__PURE__ */ React.createElement("header", { style: { background: "#0f172a", color: "#fff", padding: "16px 18px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 19, fontWeight: 700, letterSpacing: -0.3 } }, "Turni"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#94a3b8" } }, employees.length, " dipendenti \xB7 ", numWeeks, " ", numWeeks === 1 ? "settimana" : "settimane", " \xB7 dal ", fmtGiorno(start), persistenza ? " \xB7 salvato \u2601" : "")), syncMsg && /* @__PURE__ */ React.createElement("div", { style: { background: "#fff7ed", color: "#9a3412", fontSize: 12.5, padding: "8px 16px", borderBottom: "1px solid #fed7aa" } }, syncMsg), /* @__PURE__ */ React.createElement("nav", { style: { display: "flex", background: "#fff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 10 } }, [["dipendenti", "Dipendenti"], ["calendario", "Calendario"], ["orario", "Orario"], ["storico", "Storico"], ["statistiche", "Stat."]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTab(v), style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system, system-ui, sans-serif", background: "var(--bg)", minHeight: "100vh", color: "var(--ink)" } }, /* @__PURE__ */ React.createElement("header", { style: {
+    background: "var(--chrome)",
+    color: "var(--chrome-ink)",
+    padding: "16px 18px 14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 19, fontWeight: 700, letterSpacing: -0.3 } }, "Turni"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "var(--chrome-sub)" } }, employees.length, " dipendenti \xB7 ", numWeeks, " ", numWeeks === 1 ? "settimana" : "settimane", " \xB7 dal ", fmtGiorno(start), persistenza ? " \xB7 salvato \u2601" : "")), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => cambiaTema(tema === "scuro" ? "chiaro" : "scuro"),
+      title: tema === "scuro" ? "Passa al tema chiaro" : "Passa al tema scuro",
+      style: {
+        flexShrink: 0,
+        width: 38,
+        height: 38,
+        borderRadius: 11,
+        cursor: "pointer",
+        border: "1px solid var(--chrome-line)",
+        background: "var(--chrome-btn)",
+        color: "var(--chrome-ink)",
+        fontSize: 17,
+        lineHeight: 1,
+        padding: 0
+      }
+    },
+    tema === "scuro" ? "\u2600" : "\u263E"
+  )), syncMsg && /* @__PURE__ */ React.createElement("div", { style: { background: "var(--sync-bg)", color: "var(--sync-ink)", fontSize: 12.5, padding: "8px 16px", borderBottom: "1px solid var(--sync-line)" } }, syncMsg), /* @__PURE__ */ React.createElement("nav", { style: { display: "flex", background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 10 } }, [["dipendenti", "Dipendenti"], ["calendario", "Calendario"], ["orario", "Orario"], ["storico", "Storico"], ["statistiche", "Stat."]].map(([v, l]) => /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setTab(v), style: {
     flex: 1,
     padding: "13px 0",
     border: "none",
@@ -1753,9 +1878,9 @@ function App() {
     cursor: "pointer",
     fontSize: 12.5,
     fontWeight: tab === v ? 700 : 500,
-    color: tab === v ? "#0f172a" : "#94a3b8",
-    borderBottom: tab === v ? "2px solid #0f172a" : "2px solid transparent"
-  } }, l))), /* @__PURE__ */ React.createElement("main", null, tab === "dipendenti" && /* @__PURE__ */ React.createElement(TabDipendenti, { employees, setEmployees }), tab === "calendario" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", padding: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Luned\xEC di partenza"), /* @__PURE__ */ React.createElement(
+    color: tab === v ? "var(--ink)" : "var(--ink-3)",
+    borderBottom: tab === v ? "2px solid var(--accent)" : "2px solid transparent"
+  } }, l))), /* @__PURE__ */ React.createElement("main", null, tab === "dipendenti" && /* @__PURE__ */ React.createElement(TabDipendenti, { employees, setEmployees }), tab === "calendario" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)", padding: 16 } }, /* @__PURE__ */ React.createElement("label", { style: lbl }, "Luned\xEC di partenza"), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "date",
@@ -1772,7 +1897,7 @@ function App() {
         setStart(picked < minimo ? minimo : picked);
       }
     }
-  ), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b", marginTop: -2, marginBottom: 4 } }, "L'orario partir\xE0 dal luned\xEC ", fmtGiorno(start), ". La settimana corrente non \xE8 generabile."), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo da pianificare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, [1, 2, 3, 4].map((w) => /* @__PURE__ */ React.createElement("button", { key: w, onClick: () => setNumWeeks(w), style: chip(numWeeks === w) }, w, " sett."))), /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)", marginTop: -2, marginBottom: 4 } }, "L'orario partir\xE0 dal luned\xEC ", fmtGiorno(start), ". La settimana corrente non \xE8 generabile."), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Periodo da pianificare"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, [1, 2, 3, 4].map((w) => /* @__PURE__ */ React.createElement("button", { key: w, onClick: () => setNumWeeks(w), style: chip(numWeeks === w) }, w, " sett."))), /* @__PURE__ */ React.createElement(
     SelettoreAssenze,
     {
       employees,
@@ -1790,7 +1915,7 @@ function App() {
       start,
       numWeeks
     }
-  ), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Giorni con 3 persone (fascia mattina)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#64748b", marginBottom: 6 } }, "In questi giorni l'algoritmo affianca un turno intermedio ai 2 dell'apertura, cos\xEC da coprire anche il passaggio alla sera. Preimpostati: mer, gio e ven."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("label", { style: lbl }, "Giorni con 3 persone (fascia mattina)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-2)", marginBottom: 6 } }, "In questi giorni l'algoritmo affianca un turno intermedio ai 2 dell'apertura, cos\xEC da coprire anche il passaggio alla sera. Preimpostati: mer, gio e ven."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, GIORNI.map((g, i) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: i,
@@ -1805,38 +1930,38 @@ function App() {
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    background: "#fff",
-    border: "1px solid #e2e8f0",
+    background: "var(--surface)",
+    border: "1px solid var(--line)",
     borderRadius: 12,
     padding: "10px 12px"
   } }, /* @__PURE__ */ React.createElement("button", { onClick: () => navigaSettimana(-1), disabled: !navInfo.haPrec, style: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--line)",
     cursor: navInfo.haPrec ? "pointer" : "default",
-    background: navInfo.haPrec ? "#f8fafc" : "#f1f5f9",
-    color: navInfo.haPrec ? "#0f172a" : "#cbd5e1",
+    background: navInfo.haPrec ? "var(--surface-2)" : "var(--bg)",
+    color: navInfo.haPrec ? "var(--ink)" : "var(--ink-4)",
     fontSize: 20,
     lineHeight: 1
-  } }, "\u2039"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, fontWeight: 700, color: "#0f172a" } }, (() => {
+  } }, "\u2039"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, fontWeight: 700, color: "var(--ink)" } }, (() => {
     const [y, m, d] = navInfo.corrente.split("-").map(Number);
     const lun = new Date(y, m - 1, d);
     const dom = new Date(lun);
     dom.setDate(dom.getDate() + 6);
     return `${lun.getDate()}/${lun.getMonth() + 1} \u2013 ${dom.getDate()}/${dom.getMonth() + 1}`;
-  })()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#94a3b8" } }, "orario salvato")), /* @__PURE__ */ React.createElement("button", { onClick: () => navigaSettimana(1), disabled: !navInfo.haSucc, style: {
+  })()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "var(--ink-3)" } }, "orario salvato")), /* @__PURE__ */ React.createElement("button", { onClick: () => navigaSettimana(1), disabled: !navInfo.haSucc, style: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--line)",
     cursor: navInfo.haSucc ? "pointer" : "default",
-    background: navInfo.haSucc ? "#f8fafc" : "#f1f5f9",
-    color: navInfo.haSucc ? "#0f172a" : "#cbd5e1",
+    background: navInfo.haSucc ? "var(--surface-2)" : "var(--bg)",
+    color: navInfo.haSucc ? "var(--ink)" : "var(--ink-4)",
     fontSize: 20,
     lineHeight: 1
-  } }, "\u203A"))), orario && bozzaManuale && avvisiBozza && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 } }, "Controllo orario"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#94a3b8", marginBottom: avvisiBozza.rossi.length || avvisiBozza.gialli.length || avvisiBozza.daCompilare ? 8 : 0 } }, "Tocca una cella per assegnare il turno."), avvisiBozza.daCompilare > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#475569", marginBottom: 6 } }, "\u270E ", avvisiBozza.daCompilare, " ", avvisiBozza.daCompilare === 1 ? "cella da compilare" : "celle da compilare"), avvisiBozza.rossi.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: "r" + i, style: { fontSize: 12.5, color: "#dc2626", marginBottom: 4 } }, "\u25CF ", m)), avvisiBozza.gialli.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: "g" + i, style: { fontSize: 12.5, color: "#b45309", marginBottom: 4 } }, "\u25CF ", m)), avvisiBozza.rossi.length === 0 && avvisiBozza.gialli.length === 0 && avvisiBozza.daCompilare === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#16a34a", fontWeight: 600 } }, "\u2713 Nessun problema: puoi confermare."))), orario && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setLandscape(true), style: __spreadProps(__spreadValues({}, btnPrimary), {
-    background: "#1e293b",
+  } }, "\u203A"))), orario && bozzaManuale && avvisiBozza && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 } }, "Controllo orario"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "var(--ink-3)", marginBottom: avvisiBozza.rossi.length || avvisiBozza.gialli.length || avvisiBozza.daCompilare ? 8 : 0 } }, "Tocca una cella per assegnare il turno."), avvisiBozza.daCompilare > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ink-2)", marginBottom: 6 } }, "\u270E ", avvisiBozza.daCompilare, " ", avvisiBozza.daCompilare === 1 ? "cella da compilare" : "celle da compilare"), avvisiBozza.rossi.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: "r" + i, style: { fontSize: 12.5, color: "var(--danger)", marginBottom: 4 } }, "\u25CF ", m)), avvisiBozza.gialli.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: "g" + i, style: { fontSize: 12.5, color: "var(--warn-ink)", marginBottom: 4 } }, "\u25CF ", m)), avvisiBozza.rossi.length === 0 && avvisiBozza.gialli.length === 0 && avvisiBozza.daCompilare === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "var(--ok)", fontWeight: 600 } }, "\u2713 Nessun problema: puoi confermare."))), orario && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px 0" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setLandscape(true), style: __spreadProps(__spreadValues({}, btnPrimary), {
+    background: "var(--accent-2)",
     marginBottom: 0,
     padding: 11,
     fontSize: 14
@@ -1854,12 +1979,12 @@ function App() {
       violazioni,
       draft: bozzaManuale
     }
-  )), tab === "storico" && /* @__PURE__ */ React.createElement(TabStorico, { storico, persistenza, onApri: apriStorico }), tab === "statistiche" && /* @__PURE__ */ React.createElement(TabStatistiche, { persistenza })), tab !== "storico" && tab !== "statistiche" && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: "linear-gradient(transparent, #f1f5f9 30%)" } }, bozzaManuale ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: annullaManuale, style: __spreadProps(__spreadValues({}, btnPrimary), {
+  )), tab === "storico" && /* @__PURE__ */ React.createElement(TabStorico, { storico, persistenza, onApri: apriStorico }), tab === "statistiche" && /* @__PURE__ */ React.createElement(TabStatistiche, { persistenza })), tab !== "storico" && tab !== "statistiche" && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: "linear-gradient(transparent, var(--bg) 30%)" } }, bozzaManuale ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: annullaManuale, style: __spreadProps(__spreadValues({}, btnPrimary), {
     marginBottom: 0,
     flex: 1,
-    background: "#fff",
-    color: "#0f172a",
-    border: "1px solid #cbd5e1"
+    background: "var(--surface)",
+    color: "var(--ink)",
+    border: "1px solid var(--line-2)"
   }) }, "Annulla"), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -1869,29 +1994,29 @@ function App() {
         marginBottom: 0,
         flex: 2,
         opacity: salvataggioBozza || !avvisiBozza || avvisiBozza.rossi.length > 0 || avvisiBozza.daCompilare > 0 ? 0.5 : 1,
-        boxShadow: "0 4px 14px rgba(15,23,42,.25)"
+        boxShadow: "var(--shadow-btn)"
       })
     },
     salvataggioBozza ? "Salvataggio\u2026" : "Conferma orario"
   )) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: creaManuale, disabled: loading || employees.length === 0 || !persistenza, style: __spreadProps(__spreadValues({}, btnPrimary), {
     marginBottom: 0,
     flex: 1,
-    background: "#fff",
-    color: "#0f172a",
-    border: "1px solid #cbd5e1",
+    background: "var(--surface)",
+    color: "var(--ink)",
+    border: "1px solid var(--line-2)",
     opacity: loading || employees.length === 0 || !persistenza ? 0.5 : 1
   }) }, "Crea orario"), /* @__PURE__ */ React.createElement("button", { onClick: genera, disabled: loading || employees.length === 0, style: __spreadProps(__spreadValues({}, btnPrimary), {
     marginBottom: 0,
     flex: 2,
     opacity: loading || employees.length === 0 ? 0.5 : 1,
-    boxShadow: "0 4px 14px rgba(15,23,42,.25)"
-  }) }, loading ? "Generazione\u2026 (~1 min se il server era inattivo)" : "Genera orario"))), conferma && /* @__PURE__ */ React.createElement("div", { onClick: () => setConferma(null), style: modalBgCentro }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: modalCentro }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 } }, conferma.titolo), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: "#475569", lineHeight: 1.5, marginBottom: 16 } }, conferma.testo), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setConferma(null), style: {
+    boxShadow: "var(--shadow-btn)"
+  }) }, loading ? "Generazione\u2026 (~1 min se il server era inattivo)" : "Genera orario"))), conferma && /* @__PURE__ */ React.createElement("div", { onClick: () => setConferma(null), style: modalBgCentro }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: modalCentro }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 16, color: "var(--ink)", marginBottom: 8 } }, conferma.titolo), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 16 } }, conferma.testo), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setConferma(null), style: {
     flex: 1,
     padding: 12,
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
-    background: "#fff",
-    color: "#0f172a",
+    border: "1px solid var(--line-2)",
+    background: "var(--surface)",
+    color: "var(--ink)",
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer"
@@ -1904,8 +2029,8 @@ function App() {
     padding: 12,
     borderRadius: 10,
     border: "none",
-    background: "#0f172a",
-    color: "#fff",
+    background: "var(--accent)",
+    color: "var(--on-accent)",
     fontSize: 14,
     fontWeight: 600,
     cursor: "pointer"
@@ -1914,18 +2039,18 @@ function App() {
 function seedEmployees() {
   return [];
 }
-const lbl = { display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", margin: "14px 0 6px", textTransform: "uppercase", letterSpacing: 0.4 };
-const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 14, marginBottom: 4, boxSizing: "border-box", background: "#fff", color: "#0f172a" };
-const btnPrimary = { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#0f172a", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 12 };
-const empty = { textAlign: "center", color: "#94a3b8", fontSize: 14, padding: "48px 24px", lineHeight: 1.5 };
-const th = { padding: "8px 4px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #e2e8f0" };
-const tdName = { padding: "8px 10px", fontSize: 13, fontWeight: 600, color: "#0f172a", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" };
-const chip = (active) => ({ padding: "7px 12px", borderRadius: 9, border: "1px solid " + (active ? "#0f172a" : "#cbd5e1"), background: active ? "#0f172a" : "#fff", color: active ? "#fff" : "#475569", fontSize: 13, fontWeight: 500, cursor: "pointer" });
-const navBtn = { width: 36, height: 36, borderRadius: "50%", border: "1px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", color: "#0f172a" };
-const modalBg = { position: "fixed", inset: 0, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 };
-const modal = { background: "#fff", borderRadius: "18px 18px 0 0", padding: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" };
-const modalBgCentro = { position: "fixed", inset: 0, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 };
-const modalCentro = { background: "#fff", borderRadius: 18, padding: 20, width: "90%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto" };
+const lbl = { display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-2)", margin: "14px 0 6px", textTransform: "uppercase", letterSpacing: 0.4 };
+const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line-2)", fontSize: 14, marginBottom: 4, boxSizing: "border-box", background: "var(--surface)", color: "var(--ink)" };
+const btnPrimary = { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "var(--accent)", color: "var(--on-accent)", fontSize: 15, fontWeight: 600, cursor: "pointer", marginBottom: 12 };
+const empty = { textAlign: "center", color: "var(--ink-3)", fontSize: 14, padding: "48px 24px", lineHeight: 1.5 };
+const th = { padding: "8px 4px", fontSize: 12, textAlign: "center", borderBottom: "1px solid var(--line)" };
+const tdName = { padding: "8px 10px", fontSize: 13, fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--line-soft)", whiteSpace: "nowrap" };
+const chip = (active) => ({ padding: "7px 12px", borderRadius: 9, border: "1px solid " + (active ? "var(--accent)" : "var(--line-2)"), background: active ? "var(--accent)" : "var(--surface)", color: active ? "var(--on-accent)" : "var(--ink-2)", fontSize: 13, fontWeight: 500, cursor: "pointer" });
+const navBtn = { width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--line-2)", background: "var(--surface)", fontSize: 18, cursor: "pointer", color: "var(--ink)" };
+const modalBg = { position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100 };
+const modal = { background: "var(--surface)", borderRadius: "18px 18px 0 0", padding: 20, width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" };
+const modalBgCentro = { position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 };
+const modalCentro = { background: "var(--surface)", borderRadius: 18, padding: 20, width: "90%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto" };
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(React.createElement(App));
 } catch (e) {
